@@ -400,7 +400,7 @@ export class ToolHandlers {
   }
 
   // Server management handlers
-  async rancher_list_servers(args: any) {
+  async rancher_list_servers() {
     const serverNames = this.rancherManager.getConfigManager().getServerNames();
     return { servers: serverNames };
   }
@@ -416,7 +416,7 @@ export class ToolHandlers {
     return { serverName: args.serverName, isAlive };
   }
 
-  async rancher_ping_all_servers(args: any) {
+  async rancher_ping_all_servers() {
     const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
     const results = await serverManager.pingAllServers();
     return { results: Object.fromEntries(results) };
@@ -485,7 +485,7 @@ export class ToolHandlers {
     return { success, serverName: args.serverName };
   }
 
-  async rancher_get_connected_servers(args: any) {
+  async rancher_get_connected_servers() {
     const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
     const connectedServers = serverManager.getConnectedServers();
     return { connectedServers };
@@ -548,7 +548,7 @@ export class ToolHandlers {
   }
 
   // Utility handlers
-  async rancher_get_system_info(args: any) {
+  async rancher_get_system_info() {
     return {
       platform: process.platform,
       arch: process.arch,
@@ -566,7 +566,7 @@ export class ToolHandlers {
     };
   }
 
-  async rancher_get_version(args: any) {
+  async rancher_get_version() {
     return {
       version: '1.0.0',
       name: 'rancher-multi-server',
@@ -574,7 +574,7 @@ export class ToolHandlers {
     };
   }
 
-  async rancher_get_health_status(args: any) {
+  async rancher_get_health_status() {
     const configManager = this.rancherManager['configManager'];
     const validation = configManager.validateConfig();
     
@@ -610,8 +610,7 @@ export class ToolHandlers {
     };
   }
 
-  async rancher_reload_config(args: any) {
-    const configManager = this.rancherManager['configManager'];
+  async rancher_reload_config() {
     // Reload configuration logic would go here
     return {
       success: true,
@@ -804,16 +803,16 @@ export class ToolHandlers {
     return await this.fleetHandlers.fleet_delete_git_repo(args);
   }
 
-  async fleet_list_clusters(args: any) {
-    return await this.fleetHandlers.fleet_list_clusters(args);
+  async fleet_list_clusters() {
+    return await this.fleetHandlers.fleet_list_clusters();
   }
 
   async fleet_get_cluster(args: any) {
     return await this.fleetHandlers.fleet_get_cluster(args);
   }
 
-  async fleet_list_workspaces(args: any) {
-    return await this.fleetHandlers.fleet_list_workspaces(args);
+  async fleet_list_workspaces() {
+    return await this.fleetHandlers.fleet_list_workspaces();
   }
 
   async fleet_get_deployment_status(args: any) {
@@ -825,7 +824,7 @@ export class ToolHandlers {
   }
 
   // Universal handler for unknown tools
-  async unknown_tool(args: any) {
+  async unknown_tool() {
     return {
       error: 'Tool not found',
       message: 'Handler for this tool is not implemented'

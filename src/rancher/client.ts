@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { RancherServerConfig } from '../config/manager.js';
 import { Logger } from '../utils/logger.js';
 
@@ -152,7 +152,7 @@ export class RancherClient {
     try {
       const response = await this.axiosInstance.get('/v3/settings/server-version');
       return response.status === 200;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

@@ -1,4 +1,3 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { ConfigManager, RancherServerConfig } from '../config/manager.js';
 import { Logger } from '../utils/logger.js';
 import { RancherClient } from './client.js';
@@ -229,7 +228,7 @@ export class RancherManager {
   public async pingAllServers(): Promise<Map<string, boolean>> {
     const results = new Map<string, boolean>();
     
-    for (const [serverName, connection] of this.connections) {
+    for (const [serverName] of this.connections) {
       const isAlive = await this.pingServer(serverName);
       results.set(serverName, isAlive);
     }
@@ -311,7 +310,7 @@ export class RancherManager {
   public async cleanup(): Promise<void> {
     this.logger.info('Cleaning up Rancher Manager');
     
-    for (const [serverName, connection] of this.connections) {
+    for (const [serverName] of this.connections) {
       try {
         await this.disconnectFromServer(serverName);
       } catch (error) {

@@ -149,7 +149,7 @@ class RancherMCPServer {
     }
     
     // If handler not found, return universal handler
-    return (args: any) => handlers.unknown_tool(args);
+    return () => handlers.unknown_tool();
   }
 
   async run(): Promise<void> {

@@ -101,7 +101,7 @@ export class FleetHandlers {
   }
 
   // Fleet cluster management handlers
-  async fleet_list_clusters(args: any): Promise<any> {
+  async fleet_list_clusters(): Promise<any> {
     return await this.fleetManager.listFleetClusters();
   }
 
@@ -111,7 +111,7 @@ export class FleetHandlers {
   }
 
   // Fleet workspace handlers
-  async fleet_list_workspaces(args: any): Promise<any> {
+  async fleet_list_workspaces(): Promise<any> {
     return await this.fleetManager.getFleetWorkspaces();
   }
 
