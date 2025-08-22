@@ -1,0 +1,187 @@
+name: Deploy Application
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.1)'
+        required: false
+        default: 'patch'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run linting
+      run: npm run lint
+      
+    - name: Run tests
+      run: npm test
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Test MCP server
+      run: npm run test:mcp
+
+  publish-npm:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        registry-url: 'https://registry.npmjs.org'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Prepare version
+      run: node scripts/prepare-publish.js
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Make executable
+      run: chmod +x dist/index.js
+      
+    - name: Publish to NPM
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-github-packages:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        registry-url: 'https://npm.pkg.github.com'
+        scope: '@gorizond'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Prepare version
+      run: node scripts/prepare-publish.js
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Make executable
+      run: chmod +x dist/index.js
+      
+    - name: Publish to GitHub Packages
+      run: npm publish
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-release:
+    needs: [publish-npm, publish-github-packages]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Create release package
+      run: |
+        mkdir -p release
+        cp -r dist/* release/
+        cp package.json release/
+        cp README.md release/
+        cp LICENSE release/
+        cp .env.example release/
+        tar -czf mcp-rancher-multi.tar.gz -C release .
+        zip -r mcp-rancher-multi.zip release/
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          mcp-rancher-multi.tar.gz
+          mcp-rancher-multi.zip
+        generate_release_notes: true
+        body: |
+          ## MCP Rancher Multi Server v${{ github.ref_name }}
+          
+          ### Installation
+          
+          ```bash
+          npx @gorizond/mcp-rancher-multi
+          ```
+          
+          ### MCP Configuration
+          
+          Add to your `~/.cursor/mcp.json`:
+          
+          ```json
+          {
+            "mcpServers": {
+              "rancher-multi": {
+                "command": "npx",
+                "args": ["-y", "@gorizond/mcp-rancher-multi"],
+                "env": {
+                  "RANCHER_URL": "your-rancher-url",
+                  "RANCHER_TOKEN": "your-rancher-token"
+                }
+              }
+            }
+          }
+          ```
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
