@@ -1,9 +1,8 @@
 {
   "name": "@gorizond/mcp-rancher-multi",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "MCP Server for Rancher with multi-server support and Fleet GitOps management",
   "main": "dist/index.js",
-
   "bin": {
     "mcp-rancher-multi": "dist/index.js"
   },
@@ -63,7 +62,6 @@
     "ws": "^8.14.0",
     "yaml": "^2.3.0"
   },
-
   "devDependencies": {
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.0",
