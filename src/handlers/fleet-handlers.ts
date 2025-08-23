@@ -28,7 +28,7 @@ export class FleetHandlers {
               this.rancherManager.getLogger()
             );
           }
-        } catch (error) {
+        } catch {
           // Continue to next connection
         }
       }
