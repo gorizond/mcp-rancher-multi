@@ -124,6 +124,14 @@ export class ToolHandlers {
     return await this.rancherManager.clusters.getClusterStats(args.serverName, args.clusterId);
   }
 
+  async rancher_get_cluster_kubeconfig(args: any) {
+    return await this.rancherManager.clusters.getClusterKubeconfig(
+      args.serverName, 
+      args.clusterId, 
+      args.format || 'yaml'
+    );
+  }
+
   // Project handlers
   async rancher_list_projects(args: any) {
     return await this.rancherManager.projects.getProjects(args.serverName, args.clusterId);

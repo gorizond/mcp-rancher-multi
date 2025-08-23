@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { parse as parseYaml } from 'yaml';
 import { RancherServerConfig } from '../config/manager.js';
 import { Logger } from '../utils/logger.js';
 
@@ -195,6 +196,45 @@ export class RancherClient {
 
   public async deleteCluster(clusterId: string): Promise<void> {
     await this.axiosInstance.delete(`/v3/clusters/${clusterId}`);
+  }
+
+  public async getClusterKubeconfig(clusterId: string, format: string = 'yaml'): Promise<any> {
+    try {
+      // Get kubeconfig from Rancher API
+      const response = await this.axiosInstance.get(`/v3/clusters/${clusterId}?action=generateKubeconfig`, {
+        headers: {
+          'Accept': format === 'json' ? 'application/json' : 'application/yaml'
+        }
+      });
+
+      const kubeconfig = response.data.config;
+
+      if (format === 'json') {
+        // Parse YAML to JSON if requested
+        return {
+          clusterId,
+          format: 'json',
+          kubeconfig: parseYaml(kubeconfig),
+          raw: kubeconfig
+        };
+      } else if (format === 'raw') {
+        return {
+          clusterId,
+          format: 'raw',
+          kubeconfig: kubeconfig
+        };
+      } else {
+        // Default YAML format
+        return {
+          clusterId,
+          format: 'yaml',
+          kubeconfig: kubeconfig
+        };
+      }
+    } catch (error) {
+      this.logger.error(`Failed to get kubeconfig for cluster ${clusterId}:`, error);
+      throw new Error(`Failed to get kubeconfig: ${(error as Error).message}`);
+    }
   }
 
   // Methods for working with projects

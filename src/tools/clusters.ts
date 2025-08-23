@@ -372,6 +372,30 @@ export class ClusterTools extends BaseToolManager {
           },
           required: ['serverName', 'clusterId']
         }
+      },
+      {
+        name: 'rancher_get_cluster_kubeconfig',
+        description: 'Get kubeconfig for a specific cluster',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            serverName: {
+              type: 'string',
+              description: 'Server name'
+            },
+            clusterId: {
+              type: 'string',
+              description: 'Cluster ID'
+            },
+            format: {
+              type: 'string',
+              description: 'Output format (yaml, json, raw)',
+              enum: ['yaml', 'json', 'raw'],
+              default: 'yaml'
+            }
+          },
+          required: ['serverName', 'clusterId']
+        }
       }
     ];
   }

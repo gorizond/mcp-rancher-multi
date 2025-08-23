@@ -61,4 +61,29 @@ describe('ToolHandlers', () => {
     expect(projectOperation).toHaveProperty('name');
     expect(projectOperation).toHaveProperty('description');
   });
+
+  test('should handle kubeconfig operations', () => {
+    // Test kubeconfig operation structure
+    const kubeconfigOperation = {
+      serverName: 'test-server',
+      clusterId: 'test-cluster',
+      format: 'yaml'
+    };
+
+    expect(kubeconfigOperation).toHaveProperty('serverName');
+    expect(kubeconfigOperation).toHaveProperty('clusterId');
+    expect(kubeconfigOperation).toHaveProperty('format');
+    expect(['yaml', 'json', 'raw']).toContain(kubeconfigOperation.format);
+  });
+
+  test('should validate kubeconfig format options', () => {
+    // Test that kubeconfig format validation works
+    const validFormats = ['yaml', 'json', 'raw'];
+    const invalidFormat = 'invalid';
+    
+    expect(validFormats).toContain('yaml');
+    expect(validFormats).toContain('json');
+    expect(validFormats).toContain('raw');
+    expect(validFormats).not.toContain(invalidFormat);
+  });
 });

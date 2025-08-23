@@ -256,4 +256,15 @@ export class ClusterManager {
       });
     });
   }
+
+  // Get cluster kubeconfig
+  public async getClusterKubeconfig(
+    serverName: string,
+    clusterId: string,
+    format: string = 'yaml'
+  ): Promise<any> {
+    return this.rancherManager.executeOnServer(serverName, async (client: RancherClient) => {
+      return await client.getClusterKubeconfig(clusterId, format);
+    });
+  }
 }

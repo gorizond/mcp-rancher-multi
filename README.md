@@ -8,7 +8,7 @@ MCP (Model Context Protocol) server for working with multiple Rancher servers si
 - Cluster management (create, delete, monitor)
 - Project and namespace management
 - Application deployment and management
-- **Rancher Fleet management (GitOps deployment)**
+- Rancher Fleet management (GitOps deployment)
 - User and security management
 - Monitoring and metrics
 - Backup and recovery
@@ -43,7 +43,7 @@ LOG_LEVEL=info
 
 ## Usage
 
-The server provides **over 120 tools** in the following categories:
+The server provides **over 121 tools** in the following categories:
 
 ### 🔗 Server Management (20+ tools)
 - `rancher_list_servers` - List all configured servers
@@ -60,12 +60,13 @@ The server provides **over 120 tools** in the following categories:
 - `rancher_restart_server_connection` - Restart server connection
 - `rancher_cleanup_disconnected_servers` - Remove disconnected servers
 
-### 🏗️ Cluster Management (15+ tools)
+### 🏗️ Cluster Management (16+ tools)
 - `rancher_list_clusters` - List all clusters across servers
 - `rancher_create_cluster` - Create new cluster
 - `rancher_delete_cluster` - Delete existing cluster
 - `rancher_get_cluster_status` - Get cluster status and health
 - `rancher_get_cluster_metrics` - Get cluster performance metrics
+- `rancher_get_cluster_kubeconfig` - Get kubeconfig for cluster access
 - `rancher_create_aws_cluster` - Create AWS EKS cluster
 - `rancher_create_azure_cluster` - Create Azure AKS cluster
 - `rancher_create_gcp_cluster` - Create Google GKE cluster
