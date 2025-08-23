@@ -23,6 +23,7 @@
     "build": "tsc -p .",
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
+    "lint": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "bundle": "npm run build && pkg dist/index.js --targets node18-macos-arm64,node18-linux-x64,node18-win-x64 --output dist/mcp-rancher-multi",
     "prepare": "node scripts/prepare-publish.js"
