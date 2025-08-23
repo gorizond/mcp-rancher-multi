@@ -200,14 +200,27 @@ export class RancherClient {
 
   public async getClusterKubeconfig(clusterId: string, format: string = 'yaml'): Promise<any> {
     try {
-      // Get kubeconfig from Rancher API
-      const response = await this.axiosInstance.get(`/v3/clusters/${clusterId}?action=generateKubeconfig`, {
+      this.logger.info(`Generating kubeconfig for cluster ${clusterId} in format ${format}`);
+      
+      // Generate kubeconfig using Rancher API action
+      const response = await this.axiosInstance.post(`/v3/clusters/${clusterId}?action=generateKubeconfig`, {}, {
         headers: {
-          'Accept': format === 'json' ? 'application/json' : 'application/yaml'
+          'Accept': format === 'json' ? 'application/json' : 'application/yaml',
+          'Content-Type': 'application/json'
         }
       });
 
+      this.logger.info(`Kubeconfig response received for cluster ${clusterId}`);
+      this.logger.debug(`Response data:`, response.data);
+
       const kubeconfig = response.data.config;
+
+      if (!kubeconfig) {
+        this.logger.error(`No kubeconfig found in response for cluster ${clusterId}`);
+        throw new Error('No kubeconfig found in response');
+      }
+
+      this.logger.info(`Kubeconfig generated successfully for cluster ${clusterId}`);
 
       if (format === 'json') {
         // Parse YAML to JSON if requested
