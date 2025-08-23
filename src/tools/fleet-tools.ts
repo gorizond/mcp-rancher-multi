@@ -1,9 +1,27 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { BaseToolManager } from './base';
+import { FleetManager } from '../rancher/fleet';
 
 export class FleetTools extends BaseToolManager {
+  constructor(rancherManager: any) {
+    super(rancherManager);
+  }
+
+  private addServerNameToSchema(baseSchema: any): any {
+    return {
+      ...baseSchema,
+      properties: {
+        ...baseSchema.properties,
+        serverName: {
+          type: 'string',
+          description: 'Optional: Rancher server name to connect to (uses default if not specified)'
+        }
+      }
+    };
+  }
+
   getTools(): Tool[] {
-    return [
+    const baseTools = [
       // Bundle management tools
       {
         name: 'fleet_list_bundles',
@@ -348,5 +366,88 @@ export class FleetTools extends BaseToolManager {
         }
       }
     ];
+
+    // Add serverName parameter to all tools that don't already have it
+    return baseTools.map(tool => ({
+      ...tool,
+      inputSchema: (tool.inputSchema.properties as any)?.serverName ? 
+        tool.inputSchema : 
+        this.addServerNameToSchema(tool.inputSchema)
+    }));
+  }
+
+  // Add execution methods for testing
+  async executeTool(toolName: string, args: any): Promise<any> {
+    try {
+      const fleetManager = this.getFleetManager(args.serverName);
+      
+      switch (toolName) {
+        case 'fleet_list_bundles':
+          return await fleetManager.listBundles(args.clusterId);
+        case 'fleet_get_bundle':
+          return await fleetManager.getBundle(args.bundleId, args.clusterId);
+        case 'fleet_create_bundle':
+          return await fleetManager.createBundle(args, args.clusterId);
+        case 'fleet_update_bundle':
+          return await fleetManager.updateBundle(args.bundleId, args.clusterId, args);
+        case 'fleet_delete_bundle':
+          return await fleetManager.deleteBundle(args.bundleId, args.clusterId);
+        case 'fleet_force_sync_bundle':
+          return await fleetManager.forceSyncBundle(args.bundleId, args.clusterId);
+        case 'fleet_list_git_repos':
+          return await fleetManager.listGitRepos(args.clusterId);
+        case 'fleet_get_git_repo':
+          return await fleetManager.getGitRepo(args.repoId, args.clusterId);
+        case 'fleet_create_git_repo':
+          return await fleetManager.createGitRepo(args, args.clusterId);
+        case 'fleet_update_git_repo':
+          return await fleetManager.updateGitRepo(args.repoId, args.clusterId, args);
+        case 'fleet_delete_git_repo':
+          return await fleetManager.deleteGitRepo(args.repoId, args.clusterId);
+        case 'fleet_list_clusters':
+          return await fleetManager.listFleetClusters();
+        case 'fleet_get_cluster':
+          return await fleetManager.getFleetCluster(args.clusterId);
+        case 'fleet_list_workspaces':
+          return await fleetManager.getFleetWorkspaces();
+        case 'fleet_get_deployment_status':
+          return await fleetManager.getDeploymentStatus(args.bundleId, args.clusterId);
+        case 'fleet_get_logs':
+          return await fleetManager.getFleetLogs(args.clusterId, args.namespace);
+        default:
+          throw new Error(`Unknown tool: ${toolName}`);
+      }
+    } catch (error) {
+      this.rancherManager.getLogger().error(`Error executing tool ${toolName}:`, error);
+      throw error;
+    }
+  }
+
+  private getFleetManager(serverName?: string): FleetManager {
+    // If no serverName provided, use default server
+    if (!serverName) {
+      const defaultServer = this.rancherManager.getConfigManager().getConfig().defaultServer;
+      if (!defaultServer) {
+        throw new Error('No default server configured and no serverName provided');
+      }
+      serverName = defaultServer;
+    }
+
+    // Get connection for the specific server
+    const connection = this.rancherManager.getConnection(serverName);
+    if (!connection) {
+      throw new Error(`No connection found for server: ${serverName}`);
+    }
+
+    if (!connection.isConnected) {
+      throw new Error(`Server ${serverName} is not connected`);
+    }
+
+    // Create new FleetManager for this server (no caching for tools)
+    return new FleetManager(
+      connection.client,
+      this.rancherManager.getConfigManager(),
+      this.rancherManager.getLogger()
+    );
   }
 }

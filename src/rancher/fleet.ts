@@ -54,6 +54,14 @@ export interface FleetCluster {
   updatedAt: string;
 }
 
+export interface FleetWorkspace {
+  id: string;
+  name: string;
+  state: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class FleetManager {
   private client: RancherClient;
   private logger: Logger;
@@ -120,17 +128,22 @@ export class FleetManager {
           return [];
         }
       } else {
-        // Try to get bundles from global Fleet API
-        try {
-          const response = await this.get('/v3/fleet.cattle.io.bundles');
-          if (response.data && response.data.data) {
-            return response.data.data.map((bundle: any) => this.mapBundle(bundle));
+        // Get bundles from all clusters
+        const clusters = await this.getFleetClusters();
+        const bundles: FleetBundle[] = [];
+
+        for (const cluster of clusters) {
+          try {
+            const response = await this.get(`/v3/clusters/${cluster}/fleet.cattle.io.bundles`);
+            if (response.data && response.data.data) {
+              bundles.push(...response.data.data.map((bundle: any) => this.mapBundle(bundle)));
+            }
+          } catch (error) {
+            this.logger.warn(`Failed to get bundles for cluster ${cluster}:`, error);
           }
-          return [];
-        } catch (error) {
-          this.logger.warn('Failed to get bundles from global Fleet API:', error);
-          return [];
         }
+
+        return bundles;
       }
     } catch (error) {
       this.logger.error('Error listing Fleet bundles:', error);
@@ -141,20 +154,20 @@ export class FleetManager {
   /**
    * Get a specific Fleet bundle
    */
-  async getBundle(bundleId: string, clusterId: string): Promise<FleetBundle> {
+  async getBundle(bundleId: string, clusterId: string): Promise<FleetBundle | null> {
     try {
       const response = await this.get(`/v3/clusters/${clusterId}/fleet.cattle.io.bundles/${bundleId}`);
       return this.mapBundle(response.data);
     } catch (error) {
       this.logger.error(`Error getting Fleet bundle ${bundleId}:`, error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Create a new Fleet bundle
    */
-  async createBundle(bundle: Partial<FleetBundle>, clusterId: string): Promise<FleetBundle> {
+  async createBundle(bundle: Partial<FleetBundle>, clusterId: string): Promise<FleetBundle | null> {
     try {
       const response = await this.post(`/v3/clusters/${clusterId}/fleet.cattle.io.bundles`, {
         type: 'fleet.cattle.io.bundle',
@@ -170,14 +183,14 @@ export class FleetManager {
       return this.mapBundle(response.data);
     } catch (error) {
       this.logger.error('Error creating Fleet bundle:', error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Update a Fleet bundle
    */
-  async updateBundle(bundleId: string, clusterId: string, updates: Partial<FleetBundle>): Promise<FleetBundle> {
+  async updateBundle(bundleId: string, clusterId: string, updates: Partial<FleetBundle>): Promise<FleetBundle | null> {
     try {
       const response = await this.put(`/v3/clusters/${clusterId}/fleet.cattle.io.bundles/${bundleId}`, {
         ...updates,
@@ -186,20 +199,21 @@ export class FleetManager {
       return this.mapBundle(response.data);
     } catch (error) {
       this.logger.error(`Error updating Fleet bundle ${bundleId}:`, error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Delete a Fleet bundle
    */
-  async deleteBundle(bundleId: string, clusterId: string): Promise<void> {
+  async deleteBundle(bundleId: string, clusterId: string): Promise<boolean> {
     try {
       await this.delete(`/v3/clusters/${clusterId}/fleet.cattle.io.bundles/${bundleId}`);
       this.logger.info(`Deleted Fleet bundle ${bundleId}`);
+      return true;
     } catch (error) {
       this.logger.error(`Error deleting Fleet bundle ${bundleId}:`, error);
-      throw error;
+      return false;
     }
   }
 
@@ -221,17 +235,22 @@ export class FleetManager {
           return [];
         }
       } else {
-        // Try to get Git repos from global Fleet API
-        try {
-          const response = await this.get('/v3/fleet.cattle.io.gitrepos');
-          if (response.data && response.data.data) {
-            return response.data.data.map((repo: any) => this.mapGitRepo(repo));
+        // Get Git repos from all clusters
+        const clusters = await this.getFleetClusters();
+        const repos: FleetGitRepo[] = [];
+
+        for (const cluster of clusters) {
+          try {
+            const response = await this.get(`/v3/clusters/${cluster}/fleet.cattle.io.gitrepos`);
+            if (response.data && response.data.data) {
+              repos.push(...response.data.data.map((repo: any) => this.mapGitRepo(repo)));
+            }
+          } catch (error) {
+            this.logger.warn(`Failed to get Git repos for cluster ${cluster}:`, error);
           }
-          return [];
-        } catch (error) {
-          this.logger.warn('Failed to get Git repos from global Fleet API:', error);
-          return [];
         }
+
+        return repos;
       }
     } catch (error) {
       this.logger.error('Error listing Fleet Git repositories:', error);
@@ -242,20 +261,20 @@ export class FleetManager {
   /**
    * Get a specific Fleet Git repository
    */
-  async getGitRepo(repoId: string, clusterId: string): Promise<FleetGitRepo> {
+  async getGitRepo(repoId: string, clusterId: string): Promise<FleetGitRepo | null> {
     try {
       const response = await this.get(`/v3/clusters/${clusterId}/fleet.cattle.io.gitrepos/${repoId}`);
       return this.mapGitRepo(response.data);
     } catch (error) {
       this.logger.error(`Error getting Fleet Git repo ${repoId}:`, error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Create a new Fleet Git repository
    */
-  async createGitRepo(repo: Partial<FleetGitRepo>, clusterId: string): Promise<FleetGitRepo> {
+  async createGitRepo(repo: Partial<FleetGitRepo>, clusterId: string): Promise<FleetGitRepo | null> {
     try {
       const response = await this.post(`/v3/clusters/${clusterId}/fleet.cattle.io.gitrepos`, {
         type: 'fleet.cattle.io.gitrepo',
@@ -273,14 +292,14 @@ export class FleetManager {
       return this.mapGitRepo(response.data);
     } catch (error) {
       this.logger.error('Error creating Fleet Git repository:', error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Update a Fleet Git repository
    */
-  async updateGitRepo(repoId: string, clusterId: string, updates: Partial<FleetGitRepo>): Promise<FleetGitRepo> {
+  async updateGitRepo(repoId: string, clusterId: string, updates: Partial<FleetGitRepo>): Promise<FleetGitRepo | null> {
     try {
       const response = await this.put(`/v3/clusters/${clusterId}/fleet.cattle.io.gitrepos/${repoId}`, {
         ...updates,
@@ -289,20 +308,21 @@ export class FleetManager {
       return this.mapGitRepo(response.data);
     } catch (error) {
       this.logger.error(`Error updating Fleet Git repo ${repoId}:`, error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Delete a Fleet Git repository
    */
-  async deleteGitRepo(repoId: string, clusterId: string): Promise<void> {
+  async deleteGitRepo(repoId: string, clusterId: string): Promise<boolean> {
     try {
       await this.delete(`/v3/clusters/${clusterId}/fleet.cattle.io.gitrepos/${repoId}`);
       this.logger.info(`Deleted Fleet Git repository ${repoId}`);
+      return true;
     } catch (error) {
       this.logger.error(`Error deleting Fleet Git repo ${repoId}:`, error);
-      throw error;
+      return false;
     }
   }
 
@@ -325,23 +345,26 @@ export class FleetManager {
   /**
    * Get a specific Fleet cluster
    */
-  async getFleetCluster(clusterId: string): Promise<FleetCluster> {
+  async getFleetCluster(clusterId: string): Promise<FleetCluster | null> {
     try {
       const response = await this.get(`/v3/fleet.cattle.io.clusters/${clusterId}`);
       return this.mapFleetCluster(response.data);
     } catch (error) {
       this.logger.error(`Error getting Fleet cluster ${clusterId}:`, error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Get Fleet workspace information
    */
-  async getFleetWorkspaces(): Promise<any[]> {
+  async getFleetWorkspaces(): Promise<FleetWorkspace[]> {
     try {
       const response = await this.get('/v3/fleet.cattle.io.workspaces');
-      return response.data?.data || [];
+      if (response.data && response.data.data) {
+        return response.data.data.map((workspace: any) => this.mapFleetWorkspace(workspace));
+      }
+      return [];
     } catch (error) {
       this.logger.error('Error getting Fleet workspaces:', error);
       return [];
@@ -357,20 +380,21 @@ export class FleetManager {
       return response.data;
     } catch (error) {
       this.logger.error(`Error getting deployment status for bundle ${bundleId}:`, error);
-      throw error;
+      return null;
     }
   }
 
   /**
    * Force sync a Fleet bundle
    */
-  async forceSyncBundle(bundleId: string, clusterId: string): Promise<void> {
+  async forceSyncBundle(bundleId: string, clusterId: string): Promise<boolean> {
     try {
       await this.post(`/v3/clusters/${clusterId}/fleet.cattle.io.bundles/${bundleId}?action=forceSync`);
       this.logger.info(`Forced sync for Fleet bundle ${bundleId}`);
+      return true;
     } catch (error) {
       this.logger.error(`Error forcing sync for bundle ${bundleId}:`, error);
-      throw error;
+      return false;
     }
   }
 
@@ -391,9 +415,19 @@ export class FleetManager {
     }
   }
 
+  private async getFleetClusters(): Promise<string[]> {
+    try {
+      const clusters = await this.listFleetClusters();
+      return clusters.map(cluster => cluster.id);
+    } catch (error) {
+      this.logger.error('Error getting Fleet clusters:', error);
+      return [];
+    }
+  }
+
   private mapBundle(data: any): FleetBundle {
     return {
-      id: data.id,
+      id: data.id || data.metadata?.name,
       name: data.metadata?.name,
       namespace: data.metadata?.namespace,
       clusterId: data.clusterId,
@@ -407,7 +441,7 @@ export class FleetManager {
 
   private mapGitRepo(data: any): FleetGitRepo {
     return {
-      id: data.id,
+      id: data.id || data.metadata?.name,
       name: data.metadata?.name,
       namespace: data.metadata?.namespace,
       repo: data.spec?.repo,
@@ -423,12 +457,22 @@ export class FleetManager {
 
   private mapFleetCluster(data: any): FleetCluster {
     return {
-      id: data.id,
+      id: data.id || data.metadata?.name,
       name: data.metadata?.name,
       namespace: data.metadata?.namespace,
       state: data.status?.state || 'unknown',
       labels: data.metadata?.labels || {},
       fleetWorkspace: data.spec?.fleetWorkspace,
+      createdAt: data.metadata?.creationTimestamp,
+      updatedAt: data.metadata?.annotations?.['cattle.io/timestamp']
+    };
+  }
+
+  private mapFleetWorkspace(data: any): FleetWorkspace {
+    return {
+      id: data.id || data.metadata?.name,
+      name: data.metadata?.name,
+      state: data.status?.state || 'unknown',
       createdAt: data.metadata?.creationTimestamp,
       updatedAt: data.metadata?.annotations?.['cattle.io/timestamp']
     };
