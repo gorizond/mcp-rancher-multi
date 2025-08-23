@@ -1,0 +1,27 @@
+{
+  "repository": {
+    "owner": "gorizond",
+    "name": "mcp-rancher-multi",
+    "url": "https://github.com/gorizond/mcp-rancher-multi"
+  },
+  "release": {
+    "template": {
+      "includeCommits": true,
+      "maxCommits": 20,
+      "includeInstallation": true,
+      "includeDocker": true,
+      "includeBreakingChanges": true,
+      "includeNewFeatures": true,
+      "includeBugFixes": true
+    },
+    "labels": {
+      "breaking": ["breaking", "major", "breaking-change"],
+      "feature": ["feature", "enhancement", "new"],
+      "fix": ["fix", "bugfix", "bug"]
+    }
+  },
+  "docker": {
+    "registry": "ghcr.io",
+    "image": "gorizond/mcp-rancher-multi"
+  }
+}
