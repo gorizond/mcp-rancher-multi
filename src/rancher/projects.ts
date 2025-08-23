@@ -1,5 +1,5 @@
-import { RancherManager } from './manager.js';
-import { RancherClient, RancherProject } from './client.js';
+import { RancherManager } from './manager';
+import { RancherClient, RancherProject } from './client';
 
 export class ProjectManager {
   private rancherManager: RancherManager;

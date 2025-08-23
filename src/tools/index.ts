@@ -1,6 +1,6 @@
-export { ClusterTools } from './clusters.js';
-export { ProjectTools } from './projects.js';
-export { FleetTools } from './fleet-tools.js';
+export { ClusterTools } from './clusters';
+export { ProjectTools } from './projects';
+export { FleetTools } from './fleet-tools';
 
 // Export all tools from other-tools.ts
 export {
@@ -22,4 +22,4 @@ export {
   PolicyTools,
   QuotaTools,
   NamespaceTools
-} from './other-tools.js';
+} from './other-tools';

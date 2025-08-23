@@ -1,9 +1,9 @@
-import { ConfigManager, RancherServerConfig } from '../config/manager.js';
-import { Logger } from '../utils/logger.js';
-import { RancherClient } from './client.js';
-import { ClusterManager } from './clusters.js';
-import { ProjectManager } from './projects.js';
-import { ApplicationManager } from './applications.js';
+import { ConfigManager, RancherServerConfig } from '../config/manager';
+import { Logger } from '../utils/logger';
+import { RancherClient } from './client';
+import { ClusterManager } from './clusters';
+import { ProjectManager } from './projects';
+import { ApplicationManager } from './applications';
 import { 
   UserManager,
   MonitoringManager,
@@ -22,7 +22,7 @@ import {
   PolicyManager,
   QuotaManager,
   NamespaceManager
-} from './other-managers.js';
+} from './other-managers';
 
 export interface RancherConnection {
   name: string;

@@ -1,6 +1,6 @@
-import { RancherManager } from './manager.js';
-import { RancherServerConfig } from '../config/manager.js';
-import { Logger } from '../utils/logger.js';
+import { RancherManager } from './manager';
+import { RancherServerConfig } from '../config/manager';
+import { Logger } from '../utils/logger';
 
 export class ServerManager {
   private rancherManager: RancherManager;

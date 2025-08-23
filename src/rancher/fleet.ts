@@ -1,6 +1,6 @@
-import { RancherClient } from './client.js';
-import { Logger } from '../utils/logger.js';
-import { ConfigManager } from '../config/manager.js';
+import { RancherClient } from './client';
+import { Logger } from '../utils/logger';
+import { ConfigManager } from '../config/manager';
 
 export interface FleetBundle {
   id: string;
@@ -404,3 +404,5 @@ export class FleetManager {
     };
   }
 }
+
+

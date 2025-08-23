@@ -1,5 +1,5 @@
-import { RancherManager } from '../rancher/manager.js';
-import { FleetHandlers } from './fleet-handlers.js';
+import { RancherManager } from '../rancher/manager';
+import { FleetHandlers } from './fleet-handlers';
 
 export class ToolHandlers {
   private rancherManager: RancherManager;
@@ -414,24 +414,24 @@ export class ToolHandlers {
   }
 
   async rancher_get_server_status(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.getServerStatus(args.serverName);
   }
 
   async rancher_ping_server(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const isAlive = await serverManager.pingServer(args.serverName);
     return { serverName: args.serverName, isAlive };
   }
 
   async rancher_ping_all_servers() {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const results = await serverManager.pingAllServers();
     return { results: Object.fromEntries(results) };
   }
 
   async rancher_connect_server(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const serverConfig = {
       name: args.name,
       url: args.url,
@@ -446,12 +446,12 @@ export class ToolHandlers {
   }
 
   async rancher_disconnect_server(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.disconnectFromServer(args.serverName);
   }
 
   async rancher_add_server(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const serverConfig = {
       name: args.name,
       url: args.url,
@@ -467,13 +467,13 @@ export class ToolHandlers {
   }
 
   async rancher_remove_server(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const success = serverManager.removeServer(args.serverName);
     return { success, serverName: args.serverName };
   }
 
   async rancher_update_server(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const updateConfig: any = {};
     if (args.url) updateConfig.url = args.url;
     if (args.token) updateConfig.token = args.token;
@@ -488,70 +488,70 @@ export class ToolHandlers {
   }
 
   async rancher_set_default_server(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const success = serverManager.setDefaultServer(args.serverName);
     return { success, serverName: args.serverName };
   }
 
   async rancher_get_connected_servers() {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const connectedServers = serverManager.getConnectedServers();
     return { connectedServers };
   }
 
   async rancher_get_server_info(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.getServerInfo(args.serverName);
   }
 
   async rancher_validate_server_config(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return serverManager.validateServerConfig(args.serverName);
   }
 
   async rancher_test_server_connection(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.testServerConnection(args.serverName);
   }
 
   async rancher_get_server_metrics(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.getServerMetrics(args.serverName);
   }
 
   async rancher_get_server_logs(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     const options = { lines: args.lines, level: args.level };
     return await serverManager.getServerLogs(args.serverName, options);
   }
 
   async rancher_restart_server_connection(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.restartServerConnection(args.serverName);
   }
 
   async rancher_get_server_health(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.getServerHealth(args.serverName);
   }
 
   async rancher_export_server_config(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return serverManager.exportServerConfig(args.format, args.includePasswords);
   }
 
   async rancher_import_server_config(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return serverManager.importServerConfig(args.config, args.overwrite);
   }
 
   async rancher_get_server_statistics(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.getServerStatistics(args.period);
   }
 
   async rancher_cleanup_disconnected_servers(args: any) {
-    const serverManager = new (await import('../rancher/server-manager.js')).ServerManager(this.rancherManager);
+    const serverManager = new (await import('../rancher/server-manager')).ServerManager(this.rancherManager);
     return await serverManager.cleanupDisconnectedServers(args.force);
   }
 

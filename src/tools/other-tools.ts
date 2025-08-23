@@ -1,5 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { BaseToolManager } from './base.js';
+import { BaseToolManager } from './base';
 
 // Application Tools
 export class ApplicationTools extends BaseToolManager {

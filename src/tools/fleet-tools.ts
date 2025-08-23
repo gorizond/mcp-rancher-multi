@@ -1,6 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { BaseToolManager } from './base.js';
-import { FleetManager } from '../rancher/fleet.js';
+import { BaseToolManager } from './base';
+import { FleetManager } from '../rancher/fleet';
 
 export class FleetTools extends BaseToolManager {
   private fleetManager: FleetManager;

@@ -1,8 +1,8 @@
-export { RancherManager } from './manager.js';
-export { RancherClient } from './client.js';
-export { ClusterManager } from './clusters.js';
-export { ProjectManager } from './projects.js';
-export { ApplicationManager } from './applications.js';
+export { RancherManager } from './manager';
+export { RancherClient } from './client';
+export { ClusterManager } from './clusters';
+export { ProjectManager } from './projects';
+export { ApplicationManager } from './applications';
 
 // Export all managers from other-managers.ts
 export {
@@ -23,4 +23,4 @@ export {
   PolicyManager,
   QuotaManager,
   NamespaceManager
-} from './other-managers.js';
+} from './other-managers';

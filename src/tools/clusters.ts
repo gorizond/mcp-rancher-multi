@@ -1,5 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { BaseToolManager } from './base.js';
+import { BaseToolManager } from './base';
 
 export class ClusterTools extends BaseToolManager {
   getTools(): Tool[] {

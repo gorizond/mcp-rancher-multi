@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { parse as parseYaml } from 'yaml';
-import { RancherServerConfig } from '../config/manager.js';
-import { Logger } from '../utils/logger.js';
+import { RancherServerConfig } from '../config/manager';
+import { Logger } from '../utils/logger';
 
 export interface RancherApiResponse<T = any> {
   data: T;
@@ -91,7 +91,10 @@ export class RancherClient {
     this.setupInterceptors();
     
     // Check connection
-    await this.ping();
+    const isAlive = await this.ping();
+    if (!isAlive) {
+      throw new Error('Failed to connect to Rancher server');
+    }
     
     this.isInitialized = true;
     this.logger.info(`Rancher client ${this.config.name} initialized`);

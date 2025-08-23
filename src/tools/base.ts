@@ -1,5 +1,5 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
-import { RancherManager } from '../rancher/manager.js';
+import { RancherManager } from '../rancher/manager';
 
 export abstract class BaseToolManager {
   protected rancherManager: RancherManager;

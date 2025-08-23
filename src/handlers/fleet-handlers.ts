@@ -1,5 +1,5 @@
-import { FleetManager } from '../rancher/fleet.js';
-import { RancherManager } from '../rancher/manager.js';
+import { FleetManager } from '../rancher/fleet';
+import { RancherManager } from '../rancher/manager';
 
 export class FleetHandlers {
   private fleetManager: FleetManager;

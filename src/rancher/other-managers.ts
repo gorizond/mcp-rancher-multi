@@ -1,5 +1,5 @@
-import { RancherManager } from './manager.js';
-import { RancherClient } from './client.js';
+import { RancherManager } from './manager';
+import { RancherClient } from './client';
 
 // User Manager
 export class UserManager {

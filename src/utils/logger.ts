@@ -1,5 +1,5 @@
 import winston from 'winston';
-import { ConfigManager } from '../config/manager.js';
+import { ConfigManager } from '../config/manager';
 
 export class Logger {
   private logger!: winston.Logger;

@@ -1,6 +1,6 @@
-import { RancherManager } from './manager.js';
-import { RancherClient, RancherCluster } from './client.js';
-import { Logger } from '../utils/logger.js';
+import { RancherManager } from './manager';
+import { RancherClient, RancherCluster } from './client';
+import { Logger } from '../utils/logger';
 
 export class ClusterManager {
   private rancherManager: RancherManager;
