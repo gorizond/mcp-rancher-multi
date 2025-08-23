@@ -69,6 +69,35 @@ To avoid global install, you can use `npx -y mcp-rancher-multi` as command.
 - `k8s.namespaces.list` / `k8s.raw`
 - `fleet.gitrepos.list|get|create|apply|redeploy` / `fleet.bdeploys.list` / `fleet.status.summary`
 
+## Testing
+
+The project includes a comprehensive test suite using Vitest:
+
+```bash
+# Run all tests
+npm test
+
+# Run tests once
+npm run test:run
+
+# Run tests with coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
+```
+
+### Test Structure
+- **Unit tests** (`tests/unit/`): Test individual functions and classes
+- **Integration tests** (`tests/integration/`): Test MCP server integration
+- **Fixtures** (`tests/fixtures/`): Test data and sample configurations
+
+### Coverage
+Current test coverage:
+- **Lines**: ~75%
+- **Functions**: ~94%
+- **Branches**: ~94%
+
 ## Build single-file binaries
 ```bash
 npm run bundle

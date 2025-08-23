@@ -30,5 +30,13 @@ export function loadStore(file: string): Record<string, RancherServerConfig> {
 
 export function saveStore(data: Record<string, RancherServerConfig>, file: string) {
   const fs = require('node:fs');
+  const path = require('node:path');
+  
+  // Create directory if it doesn't exist
+  const dir = path.dirname(file);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
