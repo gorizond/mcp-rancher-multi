@@ -1,30 +1,7 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { BaseToolManager } from './base';
-import { FleetManager } from '../rancher/fleet';
 
 export class FleetTools extends BaseToolManager {
-  private fleetManager: FleetManager;
-
-  constructor(rancherManager: any) {
-    super(rancherManager);
-    
-    // Get the first connected client for Fleet operations
-    const connections = rancherManager.getAllConnections();
-    const connection = connections[0];
-    
-    if (!connection) {
-      // Create a mock client for testing purposes
-      this.fleetManager = null as any;
-      return;
-    }
-    
-    this.fleetManager = new FleetManager(
-      connection.client,
-      rancherManager.getConfigManager(),
-      rancherManager.getLogger()
-    );
-  }
-
   getTools(): Tool[] {
     return [
       // Bundle management tools

@@ -67,19 +67,39 @@ export class FleetManager {
 
   // Add HTTP methods to RancherClient interface
   private async get(url: string): Promise<any> {
-    return await this.client.request({ method: 'GET', url });
+    try {
+      return await this.client.request({ method: 'GET', url });
+    } catch (error) {
+      this.logger.error(`GET request failed for ${url}:`, error);
+      throw error;
+    }
   }
 
   private async post(url: string, data?: any): Promise<any> {
-    return await this.client.request({ method: 'POST', url, data });
+    try {
+      return await this.client.request({ method: 'POST', url, data });
+    } catch (error) {
+      this.logger.error(`POST request failed for ${url}:`, error);
+      throw error;
+    }
   }
 
   private async put(url: string, data?: any): Promise<any> {
-    return await this.client.request({ method: 'PUT', url, data });
+    try {
+      return await this.client.request({ method: 'PUT', url, data });
+    } catch (error) {
+      this.logger.error(`PUT request failed for ${url}:`, error);
+      throw error;
+    }
   }
 
   private async delete(url: string): Promise<any> {
-    return await this.client.request({ method: 'DELETE', url });
+    try {
+      return await this.client.request({ method: 'DELETE', url });
+    } catch (error) {
+      this.logger.error(`DELETE request failed for ${url}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -87,24 +107,34 @@ export class FleetManager {
    */
   async listBundles(clusterId?: string): Promise<FleetBundle[]> {
     try {
-      const clusters = clusterId ? [clusterId] : await this.getFleetClusters();
-      const bundles: FleetBundle[] = [];
-
-      for (const cluster of clusters) {
+      if (clusterId) {
+        // Try to get bundles from specific cluster
         try {
-          const response = await this.get(`/v3/clusters/${cluster}/fleet.cattle.io.bundles`);
+          const response = await this.get(`/v3/clusters/${clusterId}/fleet.cattle.io.bundles`);
           if (response.data && response.data.data) {
-            bundles.push(...response.data.data.map((bundle: any) => this.mapBundle(bundle)));
+            return response.data.data.map((bundle: any) => this.mapBundle(bundle));
           }
+          return [];
         } catch (error) {
-          this.logger.warn(`Failed to get bundles for cluster ${cluster}:`, error);
+          this.logger.warn(`Failed to get bundles for cluster ${clusterId}:`, error);
+          return [];
+        }
+      } else {
+        // Try to get bundles from global Fleet API
+        try {
+          const response = await this.get('/v3/fleet.cattle.io.bundles');
+          if (response.data && response.data.data) {
+            return response.data.data.map((bundle: any) => this.mapBundle(bundle));
+          }
+          return [];
+        } catch (error) {
+          this.logger.warn('Failed to get bundles from global Fleet API:', error);
+          return [];
         }
       }
-
-      return bundles;
     } catch (error) {
       this.logger.error('Error listing Fleet bundles:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -178,24 +208,34 @@ export class FleetManager {
    */
   async listGitRepos(clusterId?: string): Promise<FleetGitRepo[]> {
     try {
-      const clusters = clusterId ? [clusterId] : await this.getFleetClusters();
-      const repos: FleetGitRepo[] = [];
-
-      for (const cluster of clusters) {
+      if (clusterId) {
+        // Try to get Git repos from specific cluster
         try {
-          const response = await this.get(`/v3/clusters/${cluster}/fleet.cattle.io.gitrepos`);
+          const response = await this.get(`/v3/clusters/${clusterId}/fleet.cattle.io.gitrepos`);
           if (response.data && response.data.data) {
-            repos.push(...response.data.data.map((repo: any) => this.mapGitRepo(repo)));
+            return response.data.data.map((repo: any) => this.mapGitRepo(repo));
           }
+          return [];
         } catch (error) {
-          this.logger.warn(`Failed to get Git repos for cluster ${cluster}:`, error);
+          this.logger.warn(`Failed to get Git repos for cluster ${clusterId}:`, error);
+          return [];
+        }
+      } else {
+        // Try to get Git repos from global Fleet API
+        try {
+          const response = await this.get('/v3/fleet.cattle.io.gitrepos');
+          if (response.data && response.data.data) {
+            return response.data.data.map((repo: any) => this.mapGitRepo(repo));
+          }
+          return [];
+        } catch (error) {
+          this.logger.warn('Failed to get Git repos from global Fleet API:', error);
+          return [];
         }
       }
-
-      return repos;
     } catch (error) {
       this.logger.error('Error listing Fleet Git repositories:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -278,7 +318,7 @@ export class FleetManager {
       return [];
     } catch (error) {
       this.logger.error('Error listing Fleet clusters:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -304,7 +344,7 @@ export class FleetManager {
       return response.data?.data || [];
     } catch (error) {
       this.logger.error('Error getting Fleet workspaces:', error);
-      throw error;
+      return [];
     }
   }
 
@@ -347,16 +387,6 @@ export class FleetManager {
       return response.data?.data || [];
     } catch (error) {
       this.logger.error('Error getting Fleet logs:', error);
-      throw error;
-    }
-  }
-
-  private async getFleetClusters(): Promise<string[]> {
-    try {
-      const clusters = await this.listFleetClusters();
-      return clusters.map(cluster => cluster.id);
-    } catch (error) {
-      this.logger.error('Error getting Fleet clusters:', error);
       return [];
     }
   }

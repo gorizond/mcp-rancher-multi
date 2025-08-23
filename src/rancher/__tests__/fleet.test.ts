@@ -65,9 +65,6 @@ describe('FleetManager', () => {
     it('should handle errors gracefully', async () => {
       mockClient.request.mockRejectedValue(new Error('API Error'));
 
-      // Mock getFleetClusters to return a cluster so the error is thrown when calling the API
-      jest.spyOn(fleetManager as any, 'getFleetClusters').mockResolvedValue(['cluster-1']);
-
       const result = await fleetManager.listBundles();
       expect(result).toEqual([]);
       expect(mockLogger.warn).toHaveBeenCalled();
@@ -613,8 +610,8 @@ describe('FleetManager', () => {
     it('should handle get fleet workspaces errors', async () => {
       mockClient.request.mockRejectedValue(new Error('Failed to get fleet workspaces'));
 
-      await expect(fleetManager.getFleetWorkspaces())
-        .rejects.toThrow('Failed to get fleet workspaces');
+      const result = await fleetManager.getFleetWorkspaces();
+      expect(result).toEqual([]);
       expect(mockLogger.error).toHaveBeenCalledWith('Error getting Fleet workspaces:', expect.any(Error));
     });
   });
@@ -676,8 +673,8 @@ describe('FleetManager', () => {
     it('should handle get fleet logs errors', async () => {
       mockClient.request.mockRejectedValue(new Error('Failed to get fleet logs'));
 
-      await expect(fleetManager.getFleetLogs('cluster-1'))
-        .rejects.toThrow('Failed to get fleet logs');
+      const result = await fleetManager.getFleetLogs('cluster-1');
+      expect(result).toEqual([]);
       expect(mockLogger.error).toHaveBeenCalledWith('Error getting Fleet logs:', expect.any(Error));
     });
   });
@@ -776,8 +773,8 @@ describe('FleetManager', () => {
     it('should handle list fleet clusters errors', async () => {
       mockClient.request.mockRejectedValue(new Error('Failed to list fleet clusters'));
 
-      await expect(fleetManager.listFleetClusters())
-        .rejects.toThrow('Failed to list fleet clusters');
+      const result = await fleetManager.listFleetClusters();
+      expect(result).toEqual([]);
       expect(mockLogger.error).toHaveBeenCalledWith('Error listing Fleet clusters:', expect.any(Error));
     });
 
@@ -816,9 +813,6 @@ describe('FleetManager', () => {
     it('should handle list git repos errors', async () => {
       mockClient.request.mockRejectedValue(new Error('Failed to list git repos'));
 
-      // Mock getFleetClusters to return a cluster so the error is thrown when calling the API
-      jest.spyOn(fleetManager as any, 'getFleetClusters').mockResolvedValue(['cluster-1']);
-
       const result = await fleetManager.listGitRepos();
       expect(result).toEqual([]);
       expect(mockLogger.warn).toHaveBeenCalled();
@@ -832,48 +826,6 @@ describe('FleetManager', () => {
       await expect(fleetManager.createGitRepo({ name: 'test', repo: 'https://github.com/test/repo' }, 'cluster-1'))
         .rejects.toThrow('Failed to create git repo');
       expect(mockLogger.error).toHaveBeenCalledWith('Error creating Fleet Git repository:', expect.any(Error));
-    });
-  });
-
-  describe('getFleetClusters private method', () => {
-    it('should return cluster IDs from fleet clusters', async () => {
-      const mockFleetClusters = [
-        { 
-          id: 'cluster-1', 
-          name: 'cluster-1',
-          namespace: 'fleet-default',
-          state: 'Ready',
-          labels: {},
-          fleetWorkspace: 'default',
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z'
-        },
-        { 
-          id: 'cluster-2', 
-          name: 'cluster-2',
-          namespace: 'fleet-default',
-          state: 'Ready',
-          labels: {},
-          fleetWorkspace: 'default',
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z'
-        }
-      ];
-
-      jest.spyOn(fleetManager, 'listFleetClusters').mockResolvedValue(mockFleetClusters);
-
-      const result = await (fleetManager as any).getFleetClusters();
-
-      expect(result).toEqual(['cluster-1', 'cluster-2']);
-    });
-
-    it('should handle errors in getFleetClusters and return empty array', async () => {
-      jest.spyOn(fleetManager, 'listFleetClusters').mockRejectedValue(new Error('Failed to get fleet clusters'));
-
-      const result = await (fleetManager as any).getFleetClusters();
-
-      expect(result).toEqual([]);
-      expect(mockLogger.error).toHaveBeenCalledWith('Error getting Fleet clusters:', expect.any(Error));
     });
   });
 
