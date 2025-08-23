@@ -393,7 +393,6 @@ describe('Fleet Edge Cases', () => {
   describe('Integration Edge Cases', () => {
     it('should handle complete workflow with errors', async () => {
       const fleetHandlers = new FleetHandlers(mockRancherManager);
-      const fleetTools = new FleetTools(mockRancherManager);
 
       // Simulate a workflow where some operations fail
       mockFleetManager.listBundles.mockResolvedValue([]);

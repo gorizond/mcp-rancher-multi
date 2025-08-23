@@ -68,11 +68,9 @@ describe('Fleet Integration Tests', () => {
 
   describe('Complete Workflow Scenarios', () => {
     let fleetHandlers: FleetHandlers;
-    let fleetTools: FleetTools;
 
     beforeEach(() => {
       fleetHandlers = new FleetHandlers(mockRancherManager);
-      fleetTools = new FleetTools(mockRancherManager);
     });
 
     describe('Bundle Lifecycle Management', () => {
