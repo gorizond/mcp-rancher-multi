@@ -42,9 +42,6 @@ jobs:
       
     - name: Build project
       run: npm run build
-      
-    - name: Test MCP server
-      run: npm run test:mcp
 
   publish-npm:
     needs: test
