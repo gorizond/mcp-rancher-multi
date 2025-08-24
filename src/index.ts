@@ -114,7 +114,7 @@ function getClient(serverId: string) {
 
 // ---- Tools: manage Rancher servers ----
 server.registerTool(
-  "rancher.servers.list",
+  "rancher_servers_list",
   {
     title: "List registered Rancher servers",
     description: "Returns known servers from local store",
@@ -124,7 +124,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "rancher.servers.add",
+  "rancher_servers_add",
   {
     title: "Add/Update Rancher server (runtime only)",
     description: "Register a Rancher Manager for current session (not persisted)",
@@ -145,7 +145,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "rancher.servers.remove",
+  "rancher_servers_remove",
   {
     title: "Remove Rancher server (runtime only)",
     description: "Deletes a server from current session (not persisted)",
@@ -161,7 +161,7 @@ server.registerTool(
 
 // ---- Tools: clusters / nodes / projects ----
 server.registerTool(
-  "rancher.clusters.list",
+  "rancher_clusters_list",
   {
     title: "List clusters",
     description: "Return clusters from selected Rancher server",
@@ -175,7 +175,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "rancher.clusters.kubeconfig",
+  "rancher_clusters_kubeconfig",
   {
     title: "Generate kubeconfig for a cluster",
     description: "POST /v3/clusters/{id}?action=generateKubeconfig",
@@ -189,7 +189,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "rancher.nodes.list",
+  "rancher_nodes_list",
   {
     title: "List nodes",
     description: "Return nodes (v3/nodes)",
@@ -203,7 +203,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "rancher.projects.list",
+  "rancher_projects_list",
   {
     title: "List projects",
     description: "Return projects in cluster (v3/projects)",
@@ -218,7 +218,7 @@ server.registerTool(
 
 // ---- Tools: Kubernetes via Rancher proxy ----
 server.registerTool(
-  "k8s.namespaces.list",
+  "k8s_namespaces_list",
   {
     title: "K8s: list namespaces",
     description: "GET /api/v1/namespaces via Rancher proxy",
@@ -232,7 +232,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "k8s.raw",
+  "k8s_raw",
   {
     title: "K8s: raw HTTP via Rancher proxy",
     description: "Arbitrary request to /api or /apis (DANGEROUS) — use carefully",
@@ -257,7 +257,7 @@ server.registerTool(
 
 // ---- Tools: Health & kubeconfig merge ----
 server.registerTool(
-  "rancher.health",
+  "rancher_health",
   {
     title: "Rancher health",
     description: "Check /v3 endpoint",
@@ -272,7 +272,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "rancher.kubeconfigs.merge",
+  "rancher_kubeconfigs_merge",
   {
     title: "Kubeconfig: merge multiple clusters",
     description: "Concatenate generated kubeconfigs for a list of clusterIds",
@@ -294,7 +294,7 @@ async function fleetApi(serverId: string, path: string, init?: RequestInit, clus
 }
 
 server.registerTool(
-  "fleet.gitrepos.list",
+  "fleet_gitrepos_list",
   {
     title: "Fleet: list GitRepos",
     description: "GET /apis/fleet.cattle.io/v1alpha1/namespaces/{ns}/gitrepos",
@@ -307,7 +307,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "fleet.gitrepos.get",
+  "fleet_gitrepos_get",
   {
     title: "Fleet: get GitRepo",
     description: "GET /apis/fleet.cattle.io/v1alpha1/namespaces/{ns}/gitrepos/{name}",
@@ -320,7 +320,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "fleet.gitrepos.create",
+  "fleet_gitrepos_create",
   {
     title: "Fleet: create GitRepo",
     description: "POST a GitRepo manifest (JSON)",
@@ -340,7 +340,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "fleet.gitrepos.apply",
+  "fleet_gitrepos_apply",
   {
     title: "Fleet: apply GitRepo (Server-Side Apply)",
     description: "PATCH application/apply-patch+yaml to GitRepo (idempotent)",
@@ -367,7 +367,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "fleet.gitrepos.redeploy",
+  "fleet_gitrepos_redeploy",
   {
     title: "Fleet: force redeploy GitRepo",
     description: "PATCH merge-patch: set metadata.annotations['fleet.cattle.io/redeployHash']",
@@ -387,7 +387,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "fleet.bdeploys.list",
+  "fleet_bdeploys_list",
   {
     title: "Fleet: list BundleDeployments",
     description: "GET /apis/fleet.cattle.io/v1alpha1/bundledeployments (optional labelSelector)",
@@ -401,7 +401,7 @@ server.registerTool(
 );
 
 server.registerTool(
-  "fleet.status.summary",
+  "fleet_status_summary",
   {
     title: "Fleet: status summary",
     description: "Aggregate Ready/NonReady from BundleDeployments and link to GitRepos",

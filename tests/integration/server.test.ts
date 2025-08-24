@@ -56,9 +56,9 @@ describe('MCP Server Integration', () => {
   });
 
   describe('Tool registration', () => {
-    it('should register rancher.servers.list tool', () => {
+    it('should register rancher_servers_list tool', () => {
       // Simulate tool registration
-      mockServer.registerTool('rancher.servers.list', {
+      mockServer.registerTool('rancher_servers_list', {
         title: 'List registered Rancher servers',
         description: 'Returns known servers from local store',
         inputSchema: {}
@@ -66,7 +66,7 @@ describe('MCP Server Integration', () => {
       
       const calls = mockServer.registerTool.mock.calls;
       const serverListCall = calls.find((call: any) => 
-        call[0] === 'rancher.servers.list'
+        call[0] === 'rancher_servers_list'
       );
       
       expect(serverListCall).toBeDefined();
@@ -77,9 +77,9 @@ describe('MCP Server Integration', () => {
       });
     });
 
-    it('should register rancher.servers.add tool', () => {
+    it('should register rancher_servers_add tool', () => {
       // Simulate tool registration
-      mockServer.registerTool('rancher.servers.add', {
+      mockServer.registerTool('rancher_servers_add', {
         title: 'Add/Update Rancher server',
         description: 'Register a Rancher Manager for later use',
         inputSchema: {}
@@ -87,7 +87,7 @@ describe('MCP Server Integration', () => {
       
       const calls = mockServer.registerTool.mock.calls;
       const serverAddCall = calls.find((call: any) => 
-        call[0] === 'rancher.servers.add'
+        call[0] === 'rancher_servers_add'
       );
       
       expect(serverAddCall).toBeDefined();
@@ -98,9 +98,9 @@ describe('MCP Server Integration', () => {
       });
     });
 
-    it('should register rancher.clusters.list tool', () => {
+    it('should register rancher_clusters_list tool', () => {
       // Simulate tool registration
-      mockServer.registerTool('rancher.clusters.list', {
+      mockServer.registerTool('rancher_clusters_list', {
         title: 'List clusters',
         description: 'Return clusters from selected Rancher server',
         inputSchema: {}
@@ -108,7 +108,7 @@ describe('MCP Server Integration', () => {
       
       const calls = mockServer.registerTool.mock.calls;
       const clustersListCall = calls.find((call: any) => 
-        call[0] === 'rancher.clusters.list'
+        call[0] === 'rancher_clusters_list'
       );
       
       expect(clustersListCall).toBeDefined();
@@ -121,7 +121,7 @@ describe('MCP Server Integration', () => {
   });
 
   describe('Tool handlers', () => {
-    it('should handle rancher.servers.list correctly', async () => {
+    it('should handle rancher_servers_list correctly', async () => {
       // This would test the actual handler function
       // For now, we'll create a mock implementation
       const mockHandler = vi.fn().mockResolvedValue({
@@ -135,7 +135,7 @@ describe('MCP Server Integration', () => {
       });
     });
 
-    it('should handle rancher.servers.add correctly', async () => {
+    it('should handle rancher_servers_add correctly', async () => {
       const mockHandler = vi.fn().mockImplementation(async (args: any) => {
         return {
           content: [{ type: 'text', text: JSON.stringify(args, null, 2) }]

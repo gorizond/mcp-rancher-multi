@@ -125,12 +125,12 @@ See `env.example` for a complete example.
 - For production, use your platform's secret management system.
 
 ## Tools overview
-- `rancher.servers.list` / `rancher.servers.add` / `rancher.servers.remove`
-- `rancher.health`
-- `rancher.clusters.list` / `rancher.nodes.list` / `rancher.projects.list`
-- `rancher.clusters.kubeconfig` / `rancher.kubeconfigs.merge`
-- `k8s.namespaces.list` / `k8s.raw`
-- `fleet.gitrepos.list|get|create|apply|redeploy` / `fleet.bdeploys.list` / `fleet.status.summary`
+- `rancher_servers_list` / `rancher_servers_add` / `rancher_servers_remove`
+- `rancher_health`
+- `rancher_clusters_list` / `rancher_nodes_list` / `rancher_projects_list`
+- `rancher_clusters_kubeconfig` / `rancher_kubeconfigs_merge`
+  - `k8s_namespaces_list` / `k8s_raw`
+  - `fleet_gitrepos_list|get|create|apply|redeploy` / `fleet_bdeploys_list` / `fleet_status_summary`
 
 ## Testing
 
