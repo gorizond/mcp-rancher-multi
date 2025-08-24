@@ -8,13 +8,26 @@ An MCP server that supports **multiple Rancher Manager** backends and exposes a 
 - Kubernetes proxy via Rancher (`/k8s/clusters/{id}`) with a raw passthrough tool.
 - Fleet GitOps tools: list/get/create/apply GitRepo, force redeploy, list BundleDeployments, status summaries.
 
-## Quickstart
+## Installation
+
+### From NPM
+```bash
+npm install @gorizond/mcp-rancher-multi
+```
+
+### From GitHub Packages
+```bash
+npm install @gorizond/mcp-rancher-multi --registry=https://npm.pkg.github.com
+```
+
+### Development
 ```bash
 npm i
 npm run build
 node dist/index.js
 ```
-Or via Docker:
+
+### Docker
 ```bash
 docker build -t ghcr.io/<you>/mcp-rancher-multi:0.3.0 .
 docker run --rm -i \
@@ -24,6 +37,34 @@ docker run --rm -i \
 ```
 
 ## MCP host config (Claude Desktop example)
+
+### Using NPM package
+```json
+{
+  "mcpServers": {
+    "rancher-multi": {
+      "command": "npx",
+      "args": ["-y", "@gorizond/mcp-rancher-multi"],
+      "env": { "MCP_RANCHER_STORE": "/abs/path/servers.json" }
+    }
+  }
+}
+```
+
+### Using GitHub Packages
+```json
+{
+  "mcpServers": {
+    "rancher-multi": {
+      "command": "npx",
+      "args": ["-y", "@gorizond/mcp-rancher-multi", "--registry=https://npm.pkg.github.com"],
+      "env": { "MCP_RANCHER_STORE": "/abs/path/servers.json" }
+    }
+  }
+}
+```
+
+### Using global install
 ```json
 {
   "mcpServers": {
@@ -35,7 +76,6 @@ docker run --rm -i \
   }
 }
 ```
-To avoid global install, you can use `npx -y mcp-rancher-multi` as command.
 
 ## Config store
 `servers.json` holds Rancher endpoints. Tokens may be in-file or referenced from env using `${ENV:NAME}`.
