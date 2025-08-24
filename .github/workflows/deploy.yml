@@ -117,7 +117,7 @@ jobs:
           mcp-rancher-multi.zip
         generate_release_notes: true
         body: |
-          ## MCP Rancher Multi Server v${{ github.ref_name }}
+          ## MCP Rancher Multi Server ${{ github.ref_name }}
           
           ### Installation
           

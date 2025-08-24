@@ -70,7 +70,24 @@ docker run --rm -i \
 
 ## Configuration
 
-The server configuration is now handled via environment variables. There are two methods to configure Rancher servers:
+The server configuration is handled via environment variables. The project supports loading configuration from `.env` files for easier local development:
+
+### Environment File Support
+The server automatically loads configuration from `.env` files in the following order (highest priority first):
+1. `.env.local` - for local development overrides
+2. `.env` - default configuration
+
+Copy `env.example` to `.env` and customize it for your environment:
+
+```bash
+cp env.example .env
+# Edit .env with your actual values
+```
+
+**Note**: `.env` files should not be committed to version control as they may contain sensitive information.
+
+### Configuration Methods
+There are two methods to configure Rancher servers:
 
 ### Method 1: JSON configuration in single environment variable
 ```bash
@@ -100,6 +117,8 @@ export RANCHER_TOKEN_lab="your_lab_token_here"
 See `env.example` for a complete example.
 
 ## Security notes
+- **Token obfuscation**: All tokens are automatically obfuscated in logs and output (showing only last 4 characters with `***` prefix)
+  - Example: `secret_token_12345` becomes `***2345`
 - Do **not** log tokens. Rotate regularly and scope minimally.
 - Use environment variables for sensitive data like tokens.
 - Consider using a `.env` file for local development (not committed to version control).

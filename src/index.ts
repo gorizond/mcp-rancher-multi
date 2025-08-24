@@ -4,84 +4,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { loadEnvFiles, loadConfigFromEnv, resolveToken, obfuscateConfig, type RancherServerConfig } from "./utils.js";
 
-// ---- ENV-based configuration ----
-export type RancherServerConfig = {
-  id: string;                 // short id (e.g. "prod", "lab")
-  name?: string;              // human friendly name
-  baseUrl: string;            // https://rancher.example.com
-  token: string;              // API token; supports ${ENV:NAME}
-  insecureSkipTlsVerify?: boolean;
-  caCertPemBase64?: string;   // optional custom CA (base64 PEM)
-};
+// ---- Load .env files first ----
+loadEnvFiles();
 
-function resolveToken(tok: string): string {
-  const m = tok?.match(/^\$\{ENV:([A-Za-z_][A-Za-z0-9_]*)\}$/);
-  if (m) return process.env[m[1]] || "";
-  return tok;
-}
-
-function loadConfigFromEnv(): Record<string, RancherServerConfig> {
-  const config: Record<string, RancherServerConfig> = {};
-  
-  // Look for RANCHER_SERVERS environment variable
-  const serversEnv = process.env.RANCHER_SERVERS;
-  if (serversEnv) {
-    try {
-      const servers = JSON.parse(serversEnv);
-      for (const [id, serverConfig] of Object.entries(servers)) {
-        config[id] = serverConfig as RancherServerConfig;
-      }
-    } catch (e) {
-      console.warn("Cannot parse RANCHER_SERVERS JSON:", e);
-    }
-  }
-  
-  // Look for individual server configurations
-  // Format: RANCHER_SERVER_<ID>_<PROPERTY>
-  const envVars = Object.keys(process.env);
-  const serverPattern = /^RANCHER_SERVER_([A-Za-z0-9_]+)_(.+)$/;
-  
-  for (const envVar of envVars) {
-    const match = envVar.match(serverPattern);
-    if (match) {
-      const [, serverId, property] = match;
-      const propertyLower = property.toLowerCase();
-      
-             if (!config[serverId]) {
-         config[serverId] = { 
-           id: serverId,
-           baseUrl: '', // Will be set below
-           token: '' // Will be set below
-         };
-       }
-      
-      const value = process.env[envVar];
-      if (value !== undefined) {
-        switch (propertyLower) {
-          case 'name':
-            config[serverId].name = value;
-            break;
-          case 'baseurl':
-            config[serverId].baseUrl = value;
-            break;
-          case 'token':
-            config[serverId].token = value;
-            break;
-          case 'insecureskiptlsverify':
-            config[serverId].insecureSkipTlsVerify = value.toLowerCase() === 'true';
-            break;
-          case 'cacertpembase64':
-            config[serverId].caCertPemBase64 = value;
-            break;
-        }
-      }
-    }
-  }
-  
-  return config;
-}
-
+// ---- Load configuration from environment ----
 const STORE = loadConfigFromEnv();
 
 // ---- Minimal Rancher client (v3 + k8s proxy) ----
@@ -192,7 +120,7 @@ server.registerTool(
     description: "Returns known servers from local store",
     inputSchema: z.object({}).shape
   },
-  async () => ({ content: [{ type: "text", text: JSON.stringify(Object.values(STORE), null, 2) }] })
+  async () => ({ content: [{ type: "text", text: JSON.stringify(Object.values(obfuscateConfig(STORE)), null, 2) }] })
 );
 
 server.registerTool(
@@ -212,7 +140,7 @@ server.registerTool(
   async (args: any) => {
     const cfg: RancherServerConfig = { ...args } as any;
     STORE[cfg.id] = cfg;
-    return { content: [{ type: "text", text: JSON.stringify(cfg, null, 2) }] };
+    return { content: [{ type: "text", text: JSON.stringify(obfuscateConfig({ [cfg.id]: cfg })[cfg.id], null, 2) }] };
   }
 );
 
@@ -227,7 +155,7 @@ server.registerTool(
     if (!STORE[id]) throw new Error(`Server '${id}' not found`);
     const removed = STORE[id];
     delete STORE[id];
-    return { content: [{ type: "text", text: JSON.stringify(removed, null, 2) }] };
+    return { content: [{ type: "text", text: JSON.stringify(obfuscateConfig({ [id]: removed })[id], null, 2) }] };
   }
 );
 
@@ -513,4 +441,4 @@ server.registerTool(
 // ---- Start server ----
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error(`[mcp-rancher-multi] started. Store: ${JSON.stringify(STORE, null, 2)}`);
+console.error(`[mcp-rancher-multi] started. Store: ${JSON.stringify(obfuscateConfig(STORE), null, 2)}`);
