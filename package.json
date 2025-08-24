@@ -50,5 +50,8 @@
       "node20-macos-arm64",
       "node20-win-x64"
     ]
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   }
 }

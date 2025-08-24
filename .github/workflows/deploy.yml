@@ -111,7 +111,7 @@ jobs:
       run: chmod +x dist/index.js
       
     - name: Publish to GitHub Packages
-      run: npm publish --access public
+      run: npm publish --access public --registry=https://npm.pkg.github.com
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
