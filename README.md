@@ -15,10 +15,7 @@ An MCP server that supports **multiple Rancher Manager** backends and exposes a 
 npm install @gorizond/mcp-rancher-multi
 ```
 
-### From GitHub Packages
-```bash
-npm install @gorizond/mcp-rancher-multi --registry=https://npm.pkg.github.com
-```
+
 
 ### Development
 ```bash
@@ -51,18 +48,7 @@ docker run --rm -i \
 }
 ```
 
-### Using GitHub Packages
-```json
-{
-  "mcpServers": {
-    "rancher-multi": {
-      "command": "npx",
-      "args": ["-y", "@gorizond/mcp-rancher-multi", "--registry=https://npm.pkg.github.com"],
-      "env": { "MCP_RANCHER_STORE": "/abs/path/servers.json" }
-    }
-  }
-}
-```
+
 
 ### Using global install
 ```json

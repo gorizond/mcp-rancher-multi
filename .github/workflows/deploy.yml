@@ -101,8 +101,8 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Prepare version
-      run: node scripts/prepare-publish.js
+    - name: Prepare version for GitHub Packages
+      run: node scripts/prepare-github-packages.js
       
     - name: Build project
       run: npm run build
@@ -111,7 +111,7 @@ jobs:
       run: chmod +x dist/index.js
       
     - name: Publish to GitHub Packages
-      run: npm publish --access public --registry=https://npm.pkg.github.com
+      run: npm publish --access public
       env:
         NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -159,14 +159,8 @@ jobs:
           
           ### Installation
           
-          **From NPM:**
           ```bash
           npx @gorizond/mcp-rancher-multi
-          ```
-          
-          **From GitHub Packages:**
-          ```bash
-          npx @gorizond/mcp-rancher-multi --registry=https://npm.pkg.github.com
           ```
           
           ### MCP Configuration
