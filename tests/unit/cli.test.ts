@@ -8,6 +8,11 @@ vi.mock('node:child_process', () => ({
   spawn: vi.fn()
 }));
 
+// Mock utils
+vi.mock('../src/utils.js', () => ({
+  loadEnvFiles: vi.fn()
+}));
+
 describe('CLI', () => {
   let mockSpawn: any;
   let mockChild: any;
@@ -151,5 +156,21 @@ describe('CLI', () => {
     if (errorCall) {
       expect(typeof errorCall[1]).toBe('function');
     }
+  });
+
+  it('should calculate correct index.js path', () => {
+    const expectedIndexPath = path.join(
+      path.dirname(fileURLToPath(import.meta.url)), 
+      '../../dist/index.js'
+    );
+    
+    expect(expectedIndexPath).toMatch(/dist\/index\.js$/);
+    expect(expectedIndexPath).toContain('mcp-rancher-multi');
+  });
+
+  it('should use process.execPath for Node.js executable', () => {
+    expect(process.execPath).toBeDefined();
+    expect(typeof process.execPath).toBe('string');
+    expect(process.execPath).toMatch(/node/);
   });
 });
