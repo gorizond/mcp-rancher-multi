@@ -8,9 +8,6 @@ const indexJs = path.join(__dirname, "index.js");
 
 const child = spawn(process.execPath, [indexJs], {
   stdio: "inherit",
-  env: {
-    ...process.env,
-    MCP_RANCHER_STORE: process.env.MCP_RANCHER_STORE || path.join(process.cwd(), "servers.json")
-  }
+  env: process.env
 });
 child.on("exit", code => process.exit(code ?? 0));

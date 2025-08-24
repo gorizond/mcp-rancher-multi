@@ -4,12 +4,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import fs from "node:fs";
-import path from "node:path";
 
-// ---- Local store for Rancher server configs ----
-const DEFAULT_STORE = process.env.MCP_RANCHER_STORE || path.join(process.cwd(), "servers.json");
-
+// ---- ENV-based configuration ----
 export type RancherServerConfig = {
   id: string;                 // short id (e.g. "prod", "lab")
   name?: string;              // human friendly name
@@ -25,23 +21,68 @@ function resolveToken(tok: string): string {
   return tok;
 }
 
-function loadStore(file = DEFAULT_STORE): Record<string, RancherServerConfig> {
-  try {
-    if (!fs.existsSync(file)) return {};
-    const raw = fs.readFileSync(file, "utf-8");
-    const parsed = JSON.parse(raw);
-    return parsed || {};
-  } catch (e) {
-    console.warn("Cannot read store:", e);
-    return {};
+function loadConfigFromEnv(): Record<string, RancherServerConfig> {
+  const config: Record<string, RancherServerConfig> = {};
+  
+  // Look for RANCHER_SERVERS environment variable
+  const serversEnv = process.env.RANCHER_SERVERS;
+  if (serversEnv) {
+    try {
+      const servers = JSON.parse(serversEnv);
+      for (const [id, serverConfig] of Object.entries(servers)) {
+        config[id] = serverConfig as RancherServerConfig;
+      }
+    } catch (e) {
+      console.warn("Cannot parse RANCHER_SERVERS JSON:", e);
+    }
   }
+  
+  // Look for individual server configurations
+  // Format: RANCHER_SERVER_<ID>_<PROPERTY>
+  const envVars = Object.keys(process.env);
+  const serverPattern = /^RANCHER_SERVER_([A-Za-z0-9_]+)_(.+)$/;
+  
+  for (const envVar of envVars) {
+    const match = envVar.match(serverPattern);
+    if (match) {
+      const [, serverId, property] = match;
+      const propertyLower = property.toLowerCase();
+      
+             if (!config[serverId]) {
+         config[serverId] = { 
+           id: serverId,
+           baseUrl: '', // Will be set below
+           token: '' // Will be set below
+         };
+       }
+      
+      const value = process.env[envVar];
+      if (value !== undefined) {
+        switch (propertyLower) {
+          case 'name':
+            config[serverId].name = value;
+            break;
+          case 'baseurl':
+            config[serverId].baseUrl = value;
+            break;
+          case 'token':
+            config[serverId].token = value;
+            break;
+          case 'insecureskiptlsverify':
+            config[serverId].insecureSkipTlsVerify = value.toLowerCase() === 'true';
+            break;
+          case 'cacertpembase64':
+            config[serverId].caCertPemBase64 = value;
+            break;
+        }
+      }
+    }
+  }
+  
+  return config;
 }
 
-function saveStore(data: Record<string, RancherServerConfig>, file = DEFAULT_STORE) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
-
-let STORE = loadStore();
+const STORE = loadConfigFromEnv();
 
 // ---- Minimal Rancher client (v3 + k8s proxy) ----
 class RancherClient {
@@ -157,8 +198,8 @@ server.registerTool(
 server.registerTool(
   "rancher.servers.add",
   {
-    title: "Add/Update Rancher server",
-    description: "Register a Rancher Manager for later use",
+    title: "Add/Update Rancher server (runtime only)",
+    description: "Register a Rancher Manager for current session (not persisted)",
     inputSchema: z.object({
       id: z.string(),
       baseUrl: z.string().url(),
@@ -171,7 +212,6 @@ server.registerTool(
   async (args: any) => {
     const cfg: RancherServerConfig = { ...args } as any;
     STORE[cfg.id] = cfg;
-    saveStore(STORE);
     return { content: [{ type: "text", text: JSON.stringify(cfg, null, 2) }] };
   }
 );
@@ -179,15 +219,14 @@ server.registerTool(
 server.registerTool(
   "rancher.servers.remove",
   {
-    title: "Remove Rancher server",
-    description: "Deletes a server from local store",
+    title: "Remove Rancher server (runtime only)",
+    description: "Deletes a server from current session (not persisted)",
     inputSchema: z.object({ id: z.string() }).shape
   },
   async ({ id }: { id: string }) => {
     if (!STORE[id]) throw new Error(`Server '${id}' not found`);
     const removed = STORE[id];
     delete STORE[id];
-    saveStore(STORE);
     return { content: [{ type: "text", text: JSON.stringify(removed, null, 2) }] };
   }
 );
@@ -474,4 +513,4 @@ server.registerTool(
 // ---- Start server ----
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.error(`[mcp-rancher-multi] started. Store: ${DEFAULT_STORE}`);
+console.error(`[mcp-rancher-multi] started. Store: ${JSON.stringify(STORE, null, 2)}`);
