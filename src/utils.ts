@@ -56,6 +56,41 @@ export function obfuscateConfig(config: Record<string, RancherServerConfig>): Re
 }
 
 /**
+ * Remove Kubernetes metadata.managedFields recursively.
+ */
+export function stripMetadataManagedFields<T>(value: T): T {
+  const seen = new WeakSet();
+
+  const walk = (node: any) => {
+    if (!node || typeof node !== 'object') return;
+    if (seen.has(node)) return;
+    seen.add(node);
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        walk(item);
+      }
+      return;
+    }
+
+    if (node.metadata && typeof node.metadata === 'object') {
+      if ('managedFields' in node.metadata) {
+        delete node.metadata.managedFields;
+      }
+      walk(node.metadata);
+    }
+
+    for (const key of Object.keys(node)) {
+      if (key === 'metadata') continue;
+      walk(node[key]);
+    }
+  };
+
+  walk(value as any);
+  return value;
+}
+
+/**
  * Load Rancher server configuration from environment variables
  */
 export function loadConfigFromEnv(): Record<string, RancherServerConfig> {

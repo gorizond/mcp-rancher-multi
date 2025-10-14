@@ -4,7 +4,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { loadEnvFiles, loadConfigFromEnv, resolveToken, obfuscateConfig, type RancherServerConfig } from "./utils.js";
+import { loadEnvFiles, loadConfigFromEnv, resolveToken, obfuscateConfig, stripMetadataManagedFields, type RancherServerConfig } from "./utils.js";
 
 // ---- Load .env files first ----
 loadEnvFiles();
@@ -106,6 +106,8 @@ ${text}`);
 // ---- MCP server ----
 const server = new McpServer({ name: "mcp-rancher-multi", version: "0.3.0" });
 
+const toJsonText = (data: any) => JSON.stringify(stripMetadataManagedFields(data), null, 2);
+
 function getClient(serverId: string) {
   const cfg = STORE[serverId];
   if (!cfg) throw new Error(`Rancher server '${serverId}' not found`);
@@ -120,7 +122,7 @@ server.registerTool(
     description: "Returns known servers from local store",
     inputSchema: z.object({}).shape
   },
-  async () => ({ content: [{ type: "text", text: JSON.stringify(Object.values(obfuscateConfig(STORE)), null, 2) }] })
+  async () => ({ content: [{ type: "text", text: toJsonText(Object.values(obfuscateConfig(STORE))) }] })
 );
 
 server.registerTool(
@@ -140,7 +142,7 @@ server.registerTool(
   async (args: any) => {
     const cfg: RancherServerConfig = { ...args } as any;
     STORE[cfg.id] = cfg;
-    return { content: [{ type: "text", text: JSON.stringify(obfuscateConfig({ [cfg.id]: cfg })[cfg.id], null, 2) }] };
+    return { content: [{ type: "text", text: toJsonText(obfuscateConfig({ [cfg.id]: cfg })[cfg.id]) }] };
   }
 );
 
@@ -155,7 +157,7 @@ server.registerTool(
     if (!STORE[id]) throw new Error(`Server '${id}' not found`);
     const removed = STORE[id];
     delete STORE[id];
-    return { content: [{ type: "text", text: JSON.stringify(obfuscateConfig({ [id]: removed })[id], null, 2) }] };
+    return { content: [{ type: "text", text: toJsonText(obfuscateConfig({ [id]: removed })[id]) }] };
   }
 );
 
@@ -170,7 +172,7 @@ server.registerTool(
   async ({ serverId }: { serverId: string }) => {
     const client = getClient(serverId);
     const data = await client.listClusters();
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    return { content: [{ type: "text", text: toJsonText(data) }] };
   }
 );
 
@@ -198,7 +200,7 @@ server.registerTool(
   async ({ serverId, clusterId }: { serverId: string; clusterId?: string }) => {
     const client = getClient(serverId);
     const data = await client.listNodes(clusterId);
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    return { content: [{ type: "text", text: toJsonText(data) }] };
   }
 );
 
@@ -212,7 +214,7 @@ server.registerTool(
   async ({ serverId, clusterId }: { serverId: string; clusterId: string }) => {
     const client = getClient(serverId);
     const data = await client.listProjects(clusterId);
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    return { content: [{ type: "text", text: toJsonText(data) }] };
   }
 );
 
@@ -227,7 +229,7 @@ server.registerTool(
   async ({ serverId, clusterId }: { serverId: string; clusterId: string }) => {
     const client = getClient(serverId);
     const data = await client.listNamespaces(clusterId);
-    return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    return { content: [{ type: "text", text: toJsonText(data) }] };
   }
 );
 
@@ -250,7 +252,7 @@ server.registerTool(
     const init: RequestInit = { method, headers: { "content-type": contentType || "application/json" } };
     if (body) (init as any).body = body;
     const res = await client.k8s(clusterId, p, init);
-    const text = typeof res === "string" ? res : JSON.stringify(res, null, 2);
+    const text = typeof res === "string" ? res : toJsonText(res);
     return { content: [{ type: "text", text }] };
   }
 );
@@ -302,7 +304,7 @@ server.registerTool(
   },
   async ({ serverId, namespace, clusterId }: any) => {
     const data = await fleetApi(serverId, `/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos`, undefined, clusterId);
-    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+    return { content: [{ type: 'text', text: toJsonText(data) }] };
   }
 );
 
@@ -315,7 +317,7 @@ server.registerTool(
   },
   async ({ serverId, namespace, name, clusterId }: any) => {
     const data = await fleetApi(serverId, `/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos/${name}`, undefined, clusterId);
-    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+    return { content: [{ type: 'text', text: toJsonText(data) }] };
   }
 );
 
@@ -335,7 +337,7 @@ server.registerTool(
     const res = await fleetApi(serverId, `/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body
     }, clusterId);
-    return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
+    return { content: [{ type: 'text', text: toJsonText(res) }] };
   }
 );
 
@@ -361,7 +363,7 @@ server.registerTool(
       { method: 'PATCH', headers: { 'content-type': 'application/apply-patch+yaml' }, body: manifestYaml },
       clusterId
     );
-    const text = typeof res === 'string' ? res : JSON.stringify(res, null, 2);
+    const text = typeof res === 'string' ? res : toJsonText(res);
     return { content: [{ type: 'text', text }] };
   }
 );
@@ -382,7 +384,7 @@ server.registerTool(
       { method: 'PATCH', headers: { 'content-type': 'application/merge-patch+json' }, body },
       clusterId
     );
-    return { content: [{ type: 'text', text: JSON.stringify(res, null, 2) }] };
+    return { content: [{ type: 'text', text: toJsonText(res) }] };
   }
 );
 
@@ -396,7 +398,7 @@ server.registerTool(
   async ({ serverId, labelSelector, clusterId }: any) => {
     const qs = labelSelector ? `?labelSelector=${encodeURIComponent(labelSelector)}` : '';
     const data = await fleetApi(serverId, `/apis/fleet.cattle.io/v1alpha1/bundledeployments${qs}`, undefined, clusterId);
-    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+    return { content: [{ type: 'text', text: toJsonText(data) }] };
   }
 );
 
@@ -434,7 +436,7 @@ server.registerTool(
       })) || []
     };
 
-    return { content: [{ type: 'text', text: JSON.stringify(out, null, 2) }] };
+    return { content: [{ type: 'text', text: toJsonText(out) }] };
   }
 );
 

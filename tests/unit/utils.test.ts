@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { resolveToken, loadStore, saveStore, obfuscateConfig, loadConfigFromEnv, RancherServerConfig } from '../../src/utils.js';
+import { resolveToken, loadStore, saveStore, obfuscateConfig, loadConfigFromEnv, stripMetadataManagedFields, RancherServerConfig } from '../../src/utils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -163,6 +163,53 @@ describe('Utils', () => {
 
       const obfuscated = obfuscateConfig(config);
       expect(obfuscated.server1.token).toBe('***abc');
+    });
+  });
+
+  describe('stripMetadataManagedFields', () => {
+    it('should remove managedFields from root metadata objects', () => {
+      const obj = {
+        metadata: {
+          name: 'example',
+          managedFields: [{ manager: 'controller' }],
+          labels: { app: 'demo' }
+        },
+        spec: { replicas: 2 }
+      };
+
+      const result = stripMetadataManagedFields(obj);
+
+      expect(result).toBe(obj);
+      expect(result.metadata).toEqual({ name: 'example', labels: { app: 'demo' } });
+    });
+
+    it('should remove managedFields deeply inside arrays and nested objects', () => {
+      const obj: any = {
+        items: [
+          { metadata: { name: 'a', managedFields: [{ manager: 'm1' }], annotations: { k: 'v' } } },
+          { metadata: { name: 'b', labels: { env: 'prod' } } }
+        ],
+        extra: {
+          metadata: {
+            managedFields: [{ manager: 'm2' }],
+            annotations: { other: 'value' }
+          }
+        }
+      };
+
+      const result = stripMetadataManagedFields(obj);
+
+      expect(result.items[0].metadata).toEqual({ name: 'a', annotations: { k: 'v' } });
+      expect(result.items[1].metadata).toEqual({ name: 'b', labels: { env: 'prod' } });
+      expect(result.extra.metadata).toEqual({ annotations: { other: 'value' } });
+    });
+
+    it('should handle circular references without errors', () => {
+      const obj: any = { metadata: { managedFields: [{ manager: 'loop' }] } };
+      obj.self = obj;
+
+      expect(() => stripMetadataManagedFields(obj)).not.toThrow();
+      expect(obj.metadata).toEqual({});
     });
   });
 
