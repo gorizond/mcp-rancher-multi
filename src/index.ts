@@ -85,11 +85,34 @@ server.registerTool(
   {
     title: "List clusters",
     description: "Return clusters from selected Rancher server",
-    inputSchema: z.object({ serverId: z.string() }).shape
+    inputSchema: z.object({
+      serverId: z.string(),
+      summary: z.boolean().default(false),
+      stripKeys: z.array(z.string()).optional()
+    }).shape
   },
-  async ({ serverId }: { serverId: string }) => {
+  async ({ serverId, summary, stripKeys }: { serverId: string; summary?: boolean; stripKeys?: string[] }) => {
     const client = getClient(serverId);
-    const data = await client.listClusters();
+    const data = await client.listClusters({ summary, stripKeys });
+    return { content: [{ type: "text", text: toJsonText(data, true) }] };
+  }
+);
+
+server.registerTool(
+  "rancher_cluster_get",
+  {
+    title: "Get cluster",
+    description: "Return a single cluster by id",
+    inputSchema: z.object({
+      serverId: z.string(),
+      clusterId: z.string(),
+      summary: z.boolean().default(false),
+      stripKeys: z.array(z.string()).optional()
+    }).shape
+  },
+  async ({ serverId, clusterId, summary, stripKeys }: { serverId: string; clusterId: string; summary?: boolean; stripKeys?: string[] }) => {
+    const client = getClient(serverId);
+    const data = await client.getCluster(clusterId, { summary, stripKeys });
     return { content: [{ type: "text", text: toJsonText(data) }] };
   }
 );

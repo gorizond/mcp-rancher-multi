@@ -116,6 +116,60 @@ describe('RancherClient', () => {
 
       await expect(client.listClusters()).rejects.toThrow('Network error');
     });
+
+    it('should return compact summary when requested', async () => {
+      const mockResponse = {
+        data: [
+          {
+            id: 'c1',
+            name: 'Cluster One',
+            state: 'active',
+            provider: 'rke2',
+            annotations: { 'fleet.cattle.io/workspace-name': 'ws1' },
+            status: { fleet: { ready: true } },
+            extra: { big: 'value' }
+          }
+        ]
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse)
+      });
+
+      const result: any = await client.listClusters({ summary: true });
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'c1',
+          name: 'Cluster One',
+          state: 'active',
+          provider: 'rke2',
+          workspace: 'ws1',
+          fleet: { ready: true }
+        })
+      ]);
+      expect(result[0].extra).toBeUndefined();
+    });
+
+    it('should strip specified keys before returning', async () => {
+      const mockResponse = {
+        data: [
+          { id: 'c1', name: 'Cluster One', state: 'active', links: {}, actions: { restart: true }, heavy: { data: 'x' } }
+        ]
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse)
+      });
+
+      const result: any = await client.listClusters({ stripKeys: ['links', 'actions'] });
+
+      expect(result[0].links).toBeUndefined();
+      expect(result[0].actions).toBeUndefined();
+      expect(result[0].heavy).toBeDefined();
+    });
   });
 
   describe('listNodes', () => {

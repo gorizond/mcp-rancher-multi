@@ -24,12 +24,12 @@ node dist/index.js
 
 ### Docker
 ```bash
-docker build -t ghcr.io/<you>/mcp-rancher-multi:0.1.13 .
+docker build -t ghcr.io/<you>/mcp-rancher-multi:0.1.14 .
 docker run --rm -i \
   -e RANCHER_SERVER_prod_NAME="Rancher PROD" \
   -e RANCHER_SERVER_prod_BASEURL="https://rancher.prod.example.com" \
   -e RANCHER_SERVER_prod_TOKEN="your_token_here" \
-  ghcr.io/<you>/mcp-rancher-multi:0.1.13
+  ghcr.io/<you>/mcp-rancher-multi:0.1.14
 ```
 
 ## MCP host config (Claude Desktop example)
@@ -127,12 +127,13 @@ See `env.example` for a complete example.
 ## Tools overview
 - `rancher_servers_list` / `rancher_servers_add` / `rancher_servers_remove`
 - `rancher_health`
-- `rancher_clusters_list` / `rancher_nodes_list` / `rancher_projects_list`
+- `rancher_clusters_list` / `rancher_cluster_get` / `rancher_nodes_list` / `rancher_projects_list`
 - `rancher_clusters_kubeconfig` / `rancher_kubeconfigs_merge`
   - `k8s_namespaces_list` / `k8s_raw`
   - `fleet_gitrepos_list|get|create|apply|redeploy` / `fleet_bdeploys_list` / `fleet_status_summary`
 
-### Handling large lists
+### Handling large lists / compact views
+- `rancher_clusters_list` and `rancher_cluster_get` accept `summary=true` to return compact fields (id/name/state/provider/workspace/fleet) and `stripKeys` to drop heavy sections like `links`/`actions`.
 - `k8s_raw` supports `limit`, `autoContinue`, `maxPages`, `maxItems`, custom `accept`, `stripManagedFields` (default true), and `stripKeys` (e.g. `['data','binaryData']` to drop base64 payloads) to keep outputs compact while following `metadata.continue`.
 - Fleet list tools (`fleet_gitrepos_list`, `fleet_bdeploys_list`, `fleet_status_summary`) accept the same pagination knobs plus optional `continueToken` to resume listing.
 

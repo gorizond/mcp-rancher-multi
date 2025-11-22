@@ -15,6 +15,11 @@ export type K8sRawOptions = {
   stripKeys?: string[];
 };
 
+type ClusterListOptions = {
+  summary?: boolean;
+  stripKeys?: string[];
+};
+
 const MAX_ERROR_BODY = 4000;
 
 function truncateBody(body: string, maxLen = MAX_ERROR_BODY): string {
@@ -85,12 +90,14 @@ ${truncateBody(text)}`);
     return (await res.json()) as T;
   }
 
-  async listClusters() {
+  async listClusters(options: ClusterListOptions = {}) {
+    const { summary = false, stripKeys: keysToStrip = [] } = options;
     type Cluster = { id: string; name?: string; state?: string; provider?: string; [k: string]: any };
     type Result = { data: Cluster[] };
     const url = `${this.baseUrl}/v3/clusters`;
     const res = await this.requestJSON<Result>(url);
-    return res.data;
+    const data = res.data.map(c => this.sanitizeCluster(c, { summary, stripKeys: keysToStrip }));
+    return data;
   }
 
   async listNodes(clusterId?: string) {
@@ -100,6 +107,14 @@ ${truncateBody(text)}`);
     const url = `${this.baseUrl}/v3/nodes${p}`;
     const res = await this.requestJSON<Result>(url);
     return res.data;
+  }
+
+  async getCluster(id: string, options: ClusterListOptions = {}) {
+    const { summary = false, stripKeys: keysToStrip = [] } = options;
+    type Cluster = { id: string; name?: string; state?: string; provider?: string; [k: string]: any };
+    const url = `${this.baseUrl}/v3/clusters/${encodeURIComponent(id)}`;
+    const res = await this.requestJSON<Cluster>(url);
+    return this.sanitizeCluster(res, { summary, stripKeys: keysToStrip });
   }
 
   async listProjects(clusterId: string) {
@@ -233,6 +248,37 @@ ${truncateBody(text)}`);
     if (stripManagedFields) stripMetadataManagedFields(value as any);
     if (keysToStrip.length) stripKeys(value as any, keysToStrip);
     return value;
+  }
+
+  private sanitizeCluster(cluster: any, opts: ClusterListOptions) {
+    const { summary = false, stripKeys: keysToStrip = [] } = opts;
+    if (keysToStrip.length) stripKeys(cluster, keysToStrip);
+    if (!summary) return cluster;
+
+    const workspace = cluster?.fleetWorkspaceName
+      || cluster?.annotations?.['fleet.cattle.io/workspace-name']
+      || cluster?.labels?.['fleet.cattle.io/workspace-name']
+      || cluster?.annotations?.['management.cattle.io/cluster-template-workspace-name'];
+
+    const fleetStatus = cluster?.status?.fleet || {
+      agent: cluster?.annotations?.['fleet.cattle.io/agent-state'],
+      clusterNamespace: cluster?.annotations?.['fleet.cattle.io/cluster-namespace']
+    };
+
+    return {
+      id: cluster?.id,
+      name: cluster?.name,
+      state: cluster?.state,
+      provider: cluster?.provider || cluster?.driver,
+      created: cluster?.created,
+      workspace,
+      fleet: fleetStatus,
+      kubeVersion: cluster?.kubernetesVersion,
+      agentImage: cluster?.agentImage,
+      ready: cluster?.ready,
+      transitioning: cluster?.transitioning,
+      transitioningMessage: cluster?.transitioningMessage,
+    };
   }
 
   async listNamespaces(clusterId: string) {

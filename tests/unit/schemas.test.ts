@@ -69,12 +69,21 @@ describe('Zod Schemas', () => {
 
   describe('Cluster operations schema', () => {
     const clusterListSchema = z.object({
-      serverId: z.string()
+      serverId: z.string(),
+      summary: z.boolean().default(false),
+      stripKeys: z.array(z.string()).optional()
     });
 
     const clusterKubeconfigSchema = z.object({
       serverId: z.string(),
       clusterId: z.string()
+    });
+
+    const clusterGetSchema = z.object({
+      serverId: z.string(),
+      clusterId: z.string(),
+      summary: z.boolean().default(false),
+      stripKeys: z.array(z.string()).optional()
     });
 
     it('should validate cluster list parameters', () => {
@@ -86,6 +95,17 @@ describe('Zod Schemas', () => {
       expect(result.success).toBe(true);
     });
 
+    it('should validate cluster list with summary and stripKeys', () => {
+      const params = {
+        serverId: 'test-server',
+        summary: true,
+        stripKeys: ['links', 'actions']
+      };
+
+      const result = clusterListSchema.safeParse(params);
+      expect(result.success).toBe(true);
+    });
+
     it('should validate kubeconfig generation parameters', () => {
       const validParams = {
         serverId: 'test-server',
@@ -93,6 +113,12 @@ describe('Zod Schemas', () => {
       };
 
       const result = clusterKubeconfigSchema.safeParse(validParams);
+      expect(result.success).toBe(true);
+    });
+
+    it('should validate cluster get parameters with summary', () => {
+      const params = { serverId: 'test-server', clusterId: 'cluster-1', summary: true };
+      const result = clusterGetSchema.safeParse(params);
       expect(result.success).toBe(true);
     });
 

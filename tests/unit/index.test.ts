@@ -145,6 +145,24 @@ describe('MCP Server', () => {
     );
   });
 
+  it('should register rancher_cluster_get tool', () => {
+    mockServer.registerTool('rancher_cluster_get', {
+      title: "Get cluster",
+      description: "Return a single cluster by id",
+      inputSchema: expect.any(Object)
+    }, expect.any(Function));
+    
+    expect(mockServer.registerTool).toHaveBeenCalledWith(
+      'rancher_cluster_get',
+      {
+        title: "Get cluster",
+        description: "Return a single cluster by id",
+        inputSchema: expect.any(Object)
+      },
+      expect.any(Function)
+    );
+  });
+
   it('should register rancher_nodes_list tool', () => {
     mockServer.registerTool('rancher_nodes_list', {
       title: "List nodes",
@@ -385,6 +403,7 @@ describe('MCP Server', () => {
       'rancher_servers_add',
       'rancher_servers_remove',
       'rancher_clusters_list',
+      'rancher_cluster_get',
       'rancher_clusters_kubeconfig',
       'rancher_nodes_list',
       'rancher_projects_list',
