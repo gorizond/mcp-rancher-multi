@@ -432,6 +432,33 @@ describe('RancherClient', () => {
       expect(headers.Accept).toBe(accept);
       expect(headers['content-type']).toBeUndefined();
     });
+
+    it('should strip specified keys to compact responses', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([["content-type", "application/json"]]),
+        json: () => Promise.resolve({
+          items: [
+            { metadata: { name: 'cfg1' }, data: { big: 'AAA' }, spec: { inner: { data: 'BBB', keep: 'ok' } } }
+          ],
+          binaryData: { huge: 'CCC' },
+          data: { root: 'DDD' }
+        })
+      });
+
+      const result: any = await client.k8sRaw({
+        clusterId: 'c1',
+        path: '/api/v1/configmaps',
+        method: 'GET',
+        stripKeys: ['data', 'binaryData']
+      });
+
+      expect(result.items[0].data).toBeUndefined();
+      expect(result.items[0].spec.inner.data).toBeUndefined();
+      expect(result.items[0].spec.inner.keep).toBe('ok');
+      expect(result.binaryData).toBeUndefined();
+      expect(result.data).toBeUndefined();
+    });
   });
 
   describe('listNamespaces', () => {

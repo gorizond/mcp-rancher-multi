@@ -168,10 +168,11 @@ server.registerTool(
       autoContinue: z.boolean().default(false),
       maxPages: z.number().int().positive().optional(),
       maxItems: z.number().int().positive().optional(),
-      stripManagedFields: z.boolean().default(true)
+      stripManagedFields: z.boolean().default(true),
+      stripKeys: z.array(z.string()).optional()
     }).shape
   },
-  async ({ serverId, clusterId, path: p, method, body, contentType, accept, limit, autoContinue, maxPages, maxItems, stripManagedFields }: any) => {
+  async ({ serverId, clusterId, path: p, method, body, contentType, accept, limit, autoContinue, maxPages, maxItems, stripManagedFields, stripKeys }: any) => {
     const client = getClient(serverId);
     const res = await client.k8sRaw({
       clusterId,
@@ -184,7 +185,8 @@ server.registerTool(
       autoContinue,
       maxPages,
       maxItems,
-      stripManagedFields
+      stripManagedFields,
+      stripKeys
     });
     const text = typeof res === "string" ? res : toJsonText(res, stripManagedFields);
     return { content: [{ type: "text", text }] };
@@ -238,7 +240,8 @@ async function fleetApi(serverId: string, path: string, init?: RequestInit, clus
       autoContinue: rawOptions.autoContinue,
       maxPages: rawOptions.maxPages,
       maxItems: rawOptions.maxItems,
-      stripManagedFields: rawOptions.stripManagedFields
+      stripManagedFields: rawOptions.stripManagedFields,
+      stripKeys: rawOptions.stripKeys
     });
   }
   return client.k8s(clusterId, clean, init);
@@ -259,10 +262,11 @@ server.registerTool(
       maxItems: z.number().int().positive().optional(),
       accept: z.string().optional(),
       stripManagedFields: z.boolean().default(true),
+      stripKeys: z.array(z.string()).optional(),
       continueToken: z.string().optional()
     }).shape
   },
-  async ({ serverId, namespace, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, continueToken }: any) => {
+  async ({ serverId, namespace, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, stripKeys, continueToken }: any) => {
     const path = buildPath(`/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos`, { continue: continueToken });
     const data = await fleetApi(serverId, path, undefined, clusterId, {
       method: 'GET',
@@ -271,7 +275,8 @@ server.registerTool(
       maxPages,
       maxItems,
       accept,
-      stripManagedFields
+      stripManagedFields,
+      stripKeys
     });
     return { content: [{ type: 'text', text: toJsonText(data, stripManagedFields) }] };
   }
@@ -372,10 +377,11 @@ server.registerTool(
       maxItems: z.number().int().positive().optional(),
       accept: z.string().optional(),
       stripManagedFields: z.boolean().default(true),
+      stripKeys: z.array(z.string()).optional(),
       continueToken: z.string().optional()
     }).shape
   },
-  async ({ serverId, labelSelector, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, continueToken }: any) => {
+  async ({ serverId, labelSelector, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, stripKeys, continueToken }: any) => {
     const path = buildPath(`/apis/fleet.cattle.io/v1alpha1/bundledeployments`, {
       labelSelector,
       continue: continueToken
@@ -387,7 +393,8 @@ server.registerTool(
       maxPages,
       maxItems,
       accept,
-      stripManagedFields
+      stripManagedFields,
+      stripKeys
     });
     return { content: [{ type: 'text', text: toJsonText(data, stripManagedFields) }] };
   }
@@ -408,11 +415,12 @@ server.registerTool(
       maxItems: z.number().int().positive().optional(),
       accept: z.string().optional(),
       stripManagedFields: z.boolean().default(true),
+      stripKeys: z.array(z.string()).optional(),
       continueGitRepos: z.string().optional(),
       continueBundleDeployments: z.string().optional()
     }).shape
   },
-  async ({ serverId, namespace, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, continueGitRepos, continueBundleDeployments }: any) => {
+  async ({ serverId, namespace, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, stripKeys, continueGitRepos, continueBundleDeployments }: any) => {
     const [repos, bds] = await Promise.all([
       fleetApi(serverId, buildPath(`/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos`, { continue: continueGitRepos }), undefined, clusterId, {
         method: 'GET',
@@ -421,7 +429,8 @@ server.registerTool(
         maxPages,
         maxItems,
         accept,
-        stripManagedFields
+        stripManagedFields,
+        stripKeys
       }),
       fleetApi(serverId, buildPath(`/apis/fleet.cattle.io/v1alpha1/bundledeployments`, { continue: continueBundleDeployments }), undefined, clusterId, {
         method: 'GET',
@@ -430,7 +439,8 @@ server.registerTool(
         maxPages,
         maxItems,
         accept,
-        stripManagedFields
+        stripManagedFields,
+        stripKeys
       })
     ]);
 

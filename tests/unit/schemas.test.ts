@@ -176,7 +176,14 @@ describe('Zod Schemas', () => {
       path: z.string().describe('E.g. /api/v1/pods?limit=50'),
       method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).default('GET'),
       body: z.string().optional(),
-      contentType: z.string().optional().default('application/json')
+      contentType: z.string().optional().default('application/json'),
+      accept: z.string().optional(),
+      limit: z.number().int().positive().optional(),
+      autoContinue: z.boolean().default(false),
+      maxPages: z.number().int().positive().optional(),
+      maxItems: z.number().int().positive().optional(),
+      stripManagedFields: z.boolean().default(true),
+      stripKeys: z.array(z.string()).optional()
     });
 
     it('should validate k8s namespaces parameters', () => {
@@ -198,6 +205,18 @@ describe('Zod Schemas', () => {
       };
 
       const result = k8sRawSchema.safeParse(validParams);
+      expect(result.success).toBe(true);
+    });
+
+    it('should allow optional stripKeys for compact responses', () => {
+      const params = {
+        serverId: 'test-server',
+        clusterId: 'cluster-1',
+        path: '/api/v1/secrets',
+        stripKeys: ['data']
+      };
+
+      const result = k8sRawSchema.safeParse(params);
       expect(result.success).toBe(true);
     });
 

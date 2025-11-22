@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { resolveToken, loadStore, saveStore, obfuscateConfig, loadConfigFromEnv, stripMetadataManagedFields, RancherServerConfig } from '../../src/utils.js';
+import { resolveToken, loadStore, saveStore, obfuscateConfig, loadConfigFromEnv, stripMetadataManagedFields, stripKeys, RancherServerConfig } from '../../src/utils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -210,6 +210,36 @@ describe('Utils', () => {
 
       expect(() => stripMetadataManagedFields(obj)).not.toThrow();
       expect(obj.metadata).toEqual({});
+    });
+  });
+
+  describe('stripKeys', () => {
+    it('should remove specified keys at any depth', () => {
+      const obj: any = {
+        apiVersion: 'v1',
+        data: { a: '1', b: '2' },
+        items: [
+          { metadata: { name: 'one' }, data: { secret: 'x' }, nested: { data: 'y' } },
+          { metadata: { name: 'two', data: 'keep-meta' } }
+        ],
+        metadata: { name: 'root', data: 'should-go' }
+      };
+
+      const result = stripKeys(obj, ['data']);
+
+      expect(result.data).toBeUndefined();
+      expect(result.items[0].data).toBeUndefined();
+      expect(result.items[0].nested.data).toBeUndefined();
+      expect(result.items[1].metadata.data).toBeUndefined();
+      expect(result.metadata.data).toBeUndefined();
+    });
+
+    it('should ignore empty key list and handle circular references', () => {
+      const obj: any = { keep: true };
+      obj.self = obj;
+
+      expect(stripKeys(obj, [])).toBe(obj);
+      expect(obj.keep).toBe(true);
     });
   });
 

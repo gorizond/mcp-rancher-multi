@@ -1,4 +1,4 @@
-import { RancherServerConfig, resolveToken, stripMetadataManagedFields } from './utils.js';
+import { RancherServerConfig, resolveToken, stripKeys, stripMetadataManagedFields } from './utils.js';
 
 export type K8sRawOptions = {
   clusterId: string;
@@ -12,6 +12,7 @@ export type K8sRawOptions = {
   maxPages?: number;
   maxItems?: number;
   stripManagedFields?: boolean;
+  stripKeys?: string[];
 };
 
 const MAX_ERROR_BODY = 4000;
@@ -145,7 +146,8 @@ ${truncateBody(text)}`);
       autoContinue = false,
       maxPages,
       maxItems,
-      stripManagedFields = true
+      stripManagedFields = true,
+      stripKeys: keysToStrip = []
     } = options;
 
     const headers: Record<string, string> = {
@@ -164,20 +166,20 @@ ${truncateBody(text)}`);
     const pathWithLimit = ensureLimit(path, limit);
 
     if (methodUpper === 'GET' && autoContinue) {
-      return this.paginateK8sList(clusterId, pathWithLimit, init, { maxPages, maxItems, stripManagedFields });
+      return this.paginateK8sList(clusterId, pathWithLimit, init, { maxPages, maxItems, stripManagedFields, stripKeys: keysToStrip });
     }
 
     const res = await this.k8s(clusterId, pathWithLimit, init);
-    return stripManagedFields ? stripMetadataManagedFields(res) : res;
+    return this.sanitizeResult(res, { stripManagedFields, stripKeys: keysToStrip });
   }
 
   private async paginateK8sList(
     clusterId: string,
     path: string,
     init: RequestInit,
-    opts: { maxPages?: number; maxItems?: number; stripManagedFields?: boolean }
+    opts: { maxPages?: number; maxItems?: number; stripManagedFields?: boolean; stripKeys?: string[] }
   ) {
-    const { maxPages, maxItems, stripManagedFields = true } = opts;
+    const { maxPages, maxItems, stripManagedFields = true, stripKeys: keysToStrip = [] } = opts;
     const basePath = stripContinueParam(path);
     let nextPath = path;
     let pages = 0;
@@ -189,7 +191,7 @@ ${truncateBody(text)}`);
     while (true) {
       const page = await this.k8s(clusterId, nextPath, init);
       if (!page || typeof page !== 'object' || !('items' in (page as any))) {
-        return stripManagedFields ? stripMetadataManagedFields(page) : page;
+        return this.sanitizeResult(page, { stripManagedFields, stripKeys: keysToStrip });
       }
 
       if (!firstPage) firstPage = page;
@@ -223,7 +225,14 @@ ${truncateBody(text)}`);
       }
     };
 
-    return stripManagedFields ? stripMetadataManagedFields(result) : result;
+    return this.sanitizeResult(result, { stripManagedFields, stripKeys: keysToStrip });
+  }
+
+  private sanitizeResult<T>(value: T, opts: { stripManagedFields?: boolean; stripKeys?: string[] }) {
+    const { stripManagedFields = true, stripKeys: keysToStrip = [] } = opts;
+    if (stripManagedFields) stripMetadataManagedFields(value as any);
+    if (keysToStrip.length) stripKeys(value as any, keysToStrip);
+    return value;
   }
 
   async listNamespaces(clusterId: string) {

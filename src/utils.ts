@@ -91,6 +91,38 @@ export function stripMetadataManagedFields<T>(value: T): T {
 }
 
 /**
+ * Remove specific keys recursively from any object/array tree.
+ */
+export function stripKeys<T>(value: T, keys: string[]): T {
+  const keySet = new Set(keys.filter(Boolean));
+  if (!keySet.size) return value;
+
+  const seen = new WeakSet();
+
+  const walk = (node: any) => {
+    if (!node || typeof node !== 'object') return;
+    if (seen.has(node)) return;
+    seen.add(node);
+
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+      return;
+    }
+
+    for (const key of Object.keys(node)) {
+      if (keySet.has(key)) {
+        delete node[key];
+        continue;
+      }
+      walk(node[key]);
+    }
+  };
+
+  walk(value as any);
+  return value;
+}
+
+/**
  * Load Rancher server configuration from environment variables
  */
 export function loadConfigFromEnv(): Record<string, RancherServerConfig> {

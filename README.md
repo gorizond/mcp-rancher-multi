@@ -133,7 +133,7 @@ See `env.example` for a complete example.
   - `fleet_gitrepos_list|get|create|apply|redeploy` / `fleet_bdeploys_list` / `fleet_status_summary`
 
 ### Handling large lists
-- `k8s_raw` supports `limit`, `autoContinue`, `maxPages`, `maxItems`, custom `accept`, and `stripManagedFields` (default true) to keep outputs compact while following `metadata.continue`.
+- `k8s_raw` supports `limit`, `autoContinue`, `maxPages`, `maxItems`, custom `accept`, `stripManagedFields` (default true), and `stripKeys` (e.g. `['data','binaryData']` to drop base64 payloads) to keep outputs compact while following `metadata.continue`.
 - Fleet list tools (`fleet_gitrepos_list`, `fleet_bdeploys_list`, `fleet_status_summary`) accept the same pagination knobs plus optional `continueToken` to resume listing.
 
 ## Testing
