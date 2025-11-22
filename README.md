@@ -24,12 +24,12 @@ node dist/index.js
 
 ### Docker
 ```bash
-docker build -t ghcr.io/<you>/mcp-rancher-multi:0.1.14 .
+docker build -t ghcr.io/<you>/mcp-rancher-multi:0.1.15 .
 docker run --rm -i \
   -e RANCHER_SERVER_prod_NAME="Rancher PROD" \
   -e RANCHER_SERVER_prod_BASEURL="https://rancher.prod.example.com" \
   -e RANCHER_SERVER_prod_TOKEN="your_token_here" \
-  ghcr.io/<you>/mcp-rancher-multi:0.1.14
+  ghcr.io/<you>/mcp-rancher-multi:0.1.15
 ```
 
 ## MCP host config (Claude Desktop example)
