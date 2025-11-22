@@ -24,12 +24,12 @@ node dist/index.js
 
 ### Docker
 ```bash
-docker build -t ghcr.io/<you>/mcp-rancher-multi:0.3.0 .
+docker build -t ghcr.io/<you>/mcp-rancher-multi:0.1.13 .
 docker run --rm -i \
   -e RANCHER_SERVER_prod_NAME="Rancher PROD" \
   -e RANCHER_SERVER_prod_BASEURL="https://rancher.prod.example.com" \
   -e RANCHER_SERVER_prod_TOKEN="your_token_here" \
-  ghcr.io/<you>/mcp-rancher-multi:0.3.0
+  ghcr.io/<you>/mcp-rancher-multi:0.1.13
 ```
 
 ## MCP host config (Claude Desktop example)
@@ -131,6 +131,10 @@ See `env.example` for a complete example.
 - `rancher_clusters_kubeconfig` / `rancher_kubeconfigs_merge`
   - `k8s_namespaces_list` / `k8s_raw`
   - `fleet_gitrepos_list|get|create|apply|redeploy` / `fleet_bdeploys_list` / `fleet_status_summary`
+
+### Handling large lists
+- `k8s_raw` supports `limit`, `autoContinue`, `maxPages`, `maxItems`, custom `accept`, and `stripManagedFields` (default true) to keep outputs compact while following `metadata.continue`.
+- Fleet list tools (`fleet_gitrepos_list`, `fleet_bdeploys_list`, `fleet_status_summary`) accept the same pagination knobs plus optional `continueToken` to resume listing.
 
 ## Testing
 

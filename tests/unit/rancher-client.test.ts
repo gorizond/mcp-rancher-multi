@@ -333,6 +333,107 @@ describe('RancherClient', () => {
     });
   });
 
+  describe('k8sRaw', () => {
+    it('should append limit when missing and strip managedFields', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([["content-type", "application/json"]]),
+        json: () => Promise.resolve({
+          items: [{ metadata: { name: 'p1', managedFields: [{ manager: 'm' }] } }],
+          metadata: { managedFields: [{ manager: 'meta' }] }
+        })
+      });
+
+      const result: any = await client.k8sRaw({ clusterId: 'c1', path: '/api/v1/pods', method: 'GET', limit: 5 });
+
+      const calledUrl = mockFetch.mock.calls[0][0];
+      const headers = mockFetch.mock.calls[0][1].headers;
+      expect(calledUrl).toContain('/api/v1/pods?limit=5');
+      expect(headers['content-type']).toBeUndefined();
+      expect(result.items[0].metadata.managedFields).toBeUndefined();
+      expect(result.metadata.managedFields).toBeUndefined();
+    });
+
+    it('should auto-continue across pages and collect items', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          headers: new Map([["content-type", "application/json"]]),
+          json: () => Promise.resolve({
+            kind: 'PodList',
+            metadata: { continue: 'token-123', managedFields: [{ manager: 'page1' }] },
+            items: [{ metadata: { name: 'p1', managedFields: [{ manager: 'm1' }] } }]
+          })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          headers: new Map([["content-type", "application/json"]]),
+          json: () => Promise.resolve({
+            kind: 'PodList',
+            metadata: { resourceVersion: '2' },
+            items: [{ metadata: { name: 'p2' } }]
+          })
+        });
+
+      const result: any = await client.k8sRaw({
+        clusterId: 'c1',
+        path: '/api/v1/pods',
+        method: 'GET',
+        autoContinue: true,
+        limit: 1
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+      expect(mockFetch.mock.calls[1][0]).toContain('continue=token-123');
+      expect(result.items.map((i: any) => i.metadata.name)).toEqual(['p1', 'p2']);
+      expect(result.pageInfo.pages).toBe(2);
+      expect(result.pageInfo.itemsCollected).toBe(2);
+      expect(result.metadata.continue).toBeUndefined();
+    });
+
+    it('should stop at maxItems and return continue token', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([["content-type", "application/json"]]),
+        json: () => Promise.resolve({
+          metadata: { continue: 'next-token' },
+          items: [
+            { metadata: { name: 'p1' } },
+            { metadata: { name: 'p2' } }
+          ]
+        })
+      });
+
+      const result: any = await client.k8sRaw({
+        clusterId: 'c1',
+        path: '/api/v1/pods',
+        method: 'GET',
+        autoContinue: true,
+        maxItems: 1,
+        limit: 2
+      });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.metadata.continue).toBe('next-token');
+    });
+
+    it('should honor custom Accept header', async () => {
+      const accept = 'application/json;as=PartialObjectMetadataList;v=v1;g=meta.k8s.io';
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        headers: new Map([["content-type", "application/json"]]),
+        json: () => Promise.resolve({ items: [] })
+      });
+
+      await client.k8sRaw({ clusterId: 'c1', path: '/api/v1/pods', method: 'GET', accept });
+
+      const headers = mockFetch.mock.calls[0][1].headers;
+      expect(headers.Accept).toBe(accept);
+      expect(headers['content-type']).toBeUndefined();
+    });
+  });
+
   describe('listNamespaces', () => {
     it('should list namespaces with items property', async () => {
       const mockResponse = {

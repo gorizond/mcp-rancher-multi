@@ -5,6 +5,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { loadEnvFiles, loadConfigFromEnv, resolveToken, obfuscateConfig, stripMetadataManagedFields, type RancherServerConfig } from "./utils.js";
+import { RancherClient, type K8sRawOptions } from "./rancher-client.js";
 
 // ---- Load .env files first ----
 loadEnvFiles();
@@ -12,101 +13,18 @@ loadEnvFiles();
 // ---- Load configuration from environment ----
 const STORE = loadConfigFromEnv();
 
-// ---- Minimal Rancher client (v3 + k8s proxy) ----
-class RancherClient {
-  baseUrl: string;
-  token: string;
-  insecure: boolean;
-  caCertPemBase64?: string;
-
-  constructor(cfg: RancherServerConfig) {
-    this.baseUrl = cfg.baseUrl.replace(/\/$/, "");
-    this.token = resolveToken(cfg.token);
-    this.insecure = !!cfg.insecureSkipTlsVerify;
-    this.caCertPemBase64 = cfg.caCertPemBase64;
-  }
-
-  private headers(extra?: Record<string, string>): HeadersInit {
-    const h: Record<string, string> = {
-      "Authorization": `Bearer ${this.token}`,
-      "Accept": "application/json",
-      ...extra,
-    };
-    return h;
-  }
-
-  private async requestJSON<T>(url: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(url, {
-      ...init,
-      headers: this.headers(init?.headers as Record<string, string> | undefined),
-    } as RequestInit);
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`HTTP ${res.status} ${res.statusText} — ${url}
-${text}`);
-    }
-    return (await res.json()) as T;
-  }
-
-  async listClusters() {
-    type Cluster = { id: string; name?: string; state?: string; provider?: string; [k: string]: any };
-    type Result = { data: Cluster[] };
-    const url = `${this.baseUrl}/v3/clusters`;
-    const res = await this.requestJSON<Result>(url);
-    return res.data;
-  }
-
-  async listNodes(clusterId?: string) {
-    type Node = { id: string; nodeName?: string; clusterId?: string; state?: string; [k: string]: any };
-    type Result = { data: Node[] };
-    const p = clusterId ? `?clusterId=${encodeURIComponent(clusterId)}` : "";
-    const url = `${this.baseUrl}/v3/nodes${p}`;
-    const res = await this.requestJSON<Result>(url);
-    return res.data;
-  }
-
-  async listProjects(clusterId: string) {
-    type Project = { id: string; name?: string; clusterId?: string; [k: string]: any };
-    type Result = { data: Project[] };
-    const url = `${this.baseUrl}/v3/projects?clusterId=${encodeURIComponent(clusterId)}`;
-    const res = await this.requestJSON<Result>(url);
-    return res.data;
-  }
-
-  async generateKubeconfig(clusterId: string) {
-    type KubeResp = { config: string };
-    const url = `${this.baseUrl}/v3/clusters/${encodeURIComponent(clusterId)}?action=generateKubeconfig`;
-    const res = await this.requestJSON<KubeResp>(url, { method: "POST", headers: { "content-type": "application/json" } });
-    return res.config;
-  }
-
-  async k8s(clusterId: string, k8sPath: string, init?: RequestInit) {
-    const pathClean = k8sPath.startsWith("/") ? k8sPath : `/${k8sPath}`;
-    const url = `${this.baseUrl}/k8s/clusters/${encodeURIComponent(clusterId)}${pathClean}`;
-    const res = await fetch(url, {
-      ...init,
-      headers: this.headers({ "Accept": "application/json", ...(init?.headers as any) }),
-    } as RequestInit);
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`K8s proxy HTTP ${res.status} ${res.statusText} — ${url}
-${text}`);
-    }
-    const ct = res.headers.get("content-type") || "";
-    if (ct.includes("application/json")) return res.json();
-    return res.text();
-  }
-
-  async listNamespaces(clusterId: string) {
-    const out = await this.k8s(clusterId, "/api/v1/namespaces");
-    return (out as any)?.items ?? out;
-  }
-}
-
 // ---- MCP server ----
 const server = new McpServer({ name: "mcp-rancher-multi", version: "0.3.0" });
 
-const toJsonText = (data: any) => JSON.stringify(stripMetadataManagedFields(data), null, 2);
+const toJsonText = (data: any, strip = true) => JSON.stringify(strip ? stripMetadataManagedFields(data) : data, null, 2);
+
+const buildPath = (path: string, params: Record<string, string | undefined>) => {
+  const url = new URL(path.startsWith('/') ? `http://dummy${path}` : `http://dummy/${path}`);
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') url.searchParams.set(key, value);
+  }
+  return `${url.pathname}${url.search}`;
+};
 
 function getClient(serverId: string) {
   const cfg = STORE[serverId];
@@ -244,15 +162,31 @@ server.registerTool(
       path: z.string().describe("E.g. /api/v1/pods?limit=50"),
       method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]).default("GET"),
       body: z.string().optional(),
-      contentType: z.string().optional().default("application/json")
+      contentType: z.string().optional().default("application/json"),
+      accept: z.string().optional(),
+      limit: z.number().int().positive().optional(),
+      autoContinue: z.boolean().default(false),
+      maxPages: z.number().int().positive().optional(),
+      maxItems: z.number().int().positive().optional(),
+      stripManagedFields: z.boolean().default(true)
     }).shape
   },
-  async ({ serverId, clusterId, path: p, method, body, contentType }: any) => {
+  async ({ serverId, clusterId, path: p, method, body, contentType, accept, limit, autoContinue, maxPages, maxItems, stripManagedFields }: any) => {
     const client = getClient(serverId);
-    const init: RequestInit = { method, headers: { "content-type": contentType || "application/json" } };
-    if (body) (init as any).body = body;
-    const res = await client.k8s(clusterId, p, init);
-    const text = typeof res === "string" ? res : toJsonText(res);
+    const res = await client.k8sRaw({
+      clusterId,
+      path: p,
+      method,
+      body,
+      contentType,
+      accept,
+      limit,
+      autoContinue,
+      maxPages,
+      maxItems,
+      stripManagedFields
+    });
+    const text = typeof res === "string" ? res : toJsonText(res, stripManagedFields);
     return { content: [{ type: "text", text }] };
   }
 );
@@ -289,9 +223,24 @@ server.registerTool(
 );
 
 // ---- Tools: Fleet (GitOps) on Rancher local cluster by default ----
-async function fleetApi(serverId: string, path: string, init?: RequestInit, clusterId = 'local') {
+async function fleetApi(serverId: string, path: string, init?: RequestInit, clusterId = 'local', rawOptions?: Partial<K8sRawOptions>) {
   const client = getClient(serverId);
   const clean = path.startsWith('/') ? path : `/${path}`;
+  if (rawOptions) {
+    return client.k8sRaw({
+      clusterId,
+      path: clean,
+      method: rawOptions.method || 'GET',
+      body: rawOptions.body,
+      contentType: rawOptions.contentType,
+      accept: rawOptions.accept,
+      limit: rawOptions.limit,
+      autoContinue: rawOptions.autoContinue,
+      maxPages: rawOptions.maxPages,
+      maxItems: rawOptions.maxItems,
+      stripManagedFields: rawOptions.stripManagedFields
+    });
+  }
   return client.k8s(clusterId, clean, init);
 }
 
@@ -300,11 +249,31 @@ server.registerTool(
   {
     title: "Fleet: list GitRepos",
     description: "GET /apis/fleet.cattle.io/v1alpha1/namespaces/{ns}/gitrepos",
-    inputSchema: z.object({ serverId: z.string(), namespace: z.string().default('fleet-default'), clusterId: z.string().default('local') }).shape
+    inputSchema: z.object({
+      serverId: z.string(),
+      namespace: z.string().default('fleet-default'),
+      clusterId: z.string().default('local'),
+      limit: z.number().int().positive().optional(),
+      autoContinue: z.boolean().default(true),
+      maxPages: z.number().int().positive().optional(),
+      maxItems: z.number().int().positive().optional(),
+      accept: z.string().optional(),
+      stripManagedFields: z.boolean().default(true),
+      continueToken: z.string().optional()
+    }).shape
   },
-  async ({ serverId, namespace, clusterId }: any) => {
-    const data = await fleetApi(serverId, `/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos`, undefined, clusterId);
-    return { content: [{ type: 'text', text: toJsonText(data) }] };
+  async ({ serverId, namespace, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, continueToken }: any) => {
+    const path = buildPath(`/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos`, { continue: continueToken });
+    const data = await fleetApi(serverId, path, undefined, clusterId, {
+      method: 'GET',
+      limit,
+      autoContinue,
+      maxPages,
+      maxItems,
+      accept,
+      stripManagedFields
+    });
+    return { content: [{ type: 'text', text: toJsonText(data, stripManagedFields) }] };
   }
 );
 
@@ -393,12 +362,34 @@ server.registerTool(
   {
     title: "Fleet: list BundleDeployments",
     description: "GET /apis/fleet.cattle.io/v1alpha1/bundledeployments (optional labelSelector)",
-    inputSchema: z.object({ serverId: z.string(), labelSelector: z.string().optional(), clusterId: z.string().default('local') }).shape
+    inputSchema: z.object({
+      serverId: z.string(),
+      labelSelector: z.string().optional(),
+      clusterId: z.string().default('local'),
+      limit: z.number().int().positive().optional(),
+      autoContinue: z.boolean().default(true),
+      maxPages: z.number().int().positive().optional(),
+      maxItems: z.number().int().positive().optional(),
+      accept: z.string().optional(),
+      stripManagedFields: z.boolean().default(true),
+      continueToken: z.string().optional()
+    }).shape
   },
-  async ({ serverId, labelSelector, clusterId }: any) => {
-    const qs = labelSelector ? `?labelSelector=${encodeURIComponent(labelSelector)}` : '';
-    const data = await fleetApi(serverId, `/apis/fleet.cattle.io/v1alpha1/bundledeployments${qs}`, undefined, clusterId);
-    return { content: [{ type: 'text', text: toJsonText(data) }] };
+  async ({ serverId, labelSelector, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, continueToken }: any) => {
+    const path = buildPath(`/apis/fleet.cattle.io/v1alpha1/bundledeployments`, {
+      labelSelector,
+      continue: continueToken
+    });
+    const data = await fleetApi(serverId, path, undefined, clusterId, {
+      method: 'GET',
+      limit,
+      autoContinue,
+      maxPages,
+      maxItems,
+      accept,
+      stripManagedFields
+    });
+    return { content: [{ type: 'text', text: toJsonText(data, stripManagedFields) }] };
   }
 );
 
@@ -407,12 +398,40 @@ server.registerTool(
   {
     title: "Fleet: status summary",
     description: "Aggregate Ready/NonReady from BundleDeployments and link to GitRepos",
-    inputSchema: z.object({ serverId: z.string(), namespace: z.string().default('fleet-default'), clusterId: z.string().default('local') }).shape
+    inputSchema: z.object({
+      serverId: z.string(),
+      namespace: z.string().default('fleet-default'),
+      clusterId: z.string().default('local'),
+      limit: z.number().int().positive().optional(),
+      autoContinue: z.boolean().default(true),
+      maxPages: z.number().int().positive().optional(),
+      maxItems: z.number().int().positive().optional(),
+      accept: z.string().optional(),
+      stripManagedFields: z.boolean().default(true),
+      continueGitRepos: z.string().optional(),
+      continueBundleDeployments: z.string().optional()
+    }).shape
   },
-  async ({ serverId, namespace, clusterId }: any) => {
+  async ({ serverId, namespace, clusterId, limit, autoContinue, maxPages, maxItems, accept, stripManagedFields, continueGitRepos, continueBundleDeployments }: any) => {
     const [repos, bds] = await Promise.all([
-      fleetApi(serverId, `/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos`, undefined, clusterId),
-      fleetApi(serverId, `/apis/fleet.cattle.io/v1alpha1/bundledeployments`, undefined, clusterId)
+      fleetApi(serverId, buildPath(`/apis/fleet.cattle.io/v1alpha1/namespaces/${namespace}/gitrepos`, { continue: continueGitRepos }), undefined, clusterId, {
+        method: 'GET',
+        limit,
+        autoContinue,
+        maxPages,
+        maxItems,
+        accept,
+        stripManagedFields
+      }),
+      fleetApi(serverId, buildPath(`/apis/fleet.cattle.io/v1alpha1/bundledeployments`, { continue: continueBundleDeployments }), undefined, clusterId, {
+        method: 'GET',
+        limit,
+        autoContinue,
+        maxPages,
+        maxItems,
+        accept,
+        stripManagedFields
+      })
     ]);
 
     const out = {
@@ -436,7 +455,7 @@ server.registerTool(
       })) || []
     };
 
-    return { content: [{ type: 'text', text: toJsonText(out) }] };
+    return { content: [{ type: 'text', text: toJsonText(out, stripManagedFields) }] };
   }
 );
 
