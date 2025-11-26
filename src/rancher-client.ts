@@ -424,9 +424,11 @@ ${truncateBody(text)}`);
         !nextToken || hitMaxItems || hitMaxPages || toAdd.length === 0;
       if (exhausted) break;
 
-      nextUrl = isAbsoluteUrl(nextToken)
-        ? nextToken
-        : this.toAbsoluteRancherUrl(nextToken);
+      nextUrl = nextToken
+        ? isAbsoluteUrl(nextToken)
+          ? nextToken
+          : this.toAbsoluteRancherUrl(nextToken)
+        : undefined;
     }
 
     return {
