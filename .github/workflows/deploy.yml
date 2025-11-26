@@ -105,7 +105,7 @@ jobs:
         cp package.json release/
         cp README.md release/
         cp LICENSE release/
-        cp .env.example release/
+        cp env.example release/
         tar -czf mcp-rancher-multi.tar.gz -C release .
         zip -r mcp-rancher-multi.zip release/
         
