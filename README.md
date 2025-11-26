@@ -24,12 +24,12 @@ node dist/index.js
 
 ### Docker
 ```bash
-docker build -t ghcr.io/<you>/mcp-rancher-multi:0.1.15 .
+docker build -t ghcr.io/<you>/mcp-rancher-multi:0.1.16 .
 docker run --rm -i \
   -e RANCHER_SERVER_prod_NAME="Rancher PROD" \
   -e RANCHER_SERVER_prod_BASEURL="https://rancher.prod.example.com" \
   -e RANCHER_SERVER_prod_TOKEN="your_token_here" \
-  ghcr.io/<you>/mcp-rancher-multi:0.1.15
+  ghcr.io/<you>/mcp-rancher-multi:0.1.16
 ```
 
 ## MCP host config (Claude Desktop example)
@@ -133,9 +133,10 @@ See `env.example` for a complete example.
   - `fleet_gitrepos_list|get|create|apply|redeploy` / `fleet_bdeploys_list` / `fleet_status_summary`
 
 ### Handling large lists / compact views
-- `rancher_clusters_list` and `rancher_cluster_get` accept `summary=true` to return compact fields (id/name/state/provider/workspace/fleet) and `stripKeys` to drop heavy sections like `links`/`actions`.
+- `rancher_clusters_list` defaults to a **minimal** view (`id` + `name`). Use `summaryFields` to include more from the curated summary (state/provider/workspace/fleet/kubeVersion, etc.) or `summary=false` to return full cluster objects. Pagination knobs: `limit`, `autoContinue`, `maxPages`, `maxItems`, and `continueToken` (use `pagination.next`).
+- `rancher_cluster_get` still accepts `summary=true` and `stripKeys` to drop heavy sections like `links`/`actions`.
 - `k8s_raw` supports `limit`, `autoContinue`, `maxPages`, `maxItems`, custom `accept`, `stripManagedFields` (default true), and `stripKeys` (e.g. `['data','binaryData']` to drop base64 payloads) to keep outputs compact while following `metadata.continue`.
-- Fleet list tools (`fleet_gitrepos_list`, `fleet_bdeploys_list`, `fleet_status_summary`) accept the same pagination knobs plus optional `continueToken` to resume listing.
+- Fleet list tools (`fleet_gitrepos_list`, `fleet_bdeploys_list`, `fleet_status_summary`) accept the same pagination knobs plus optional `continueToken` to resume listing, and now return compact summaries by default. Use `summary=false` or `summaryFields` to control the output payload.
 
 ## Testing
 
