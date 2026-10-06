@@ -123,14 +123,22 @@ See `env.example` for a complete example.
 - Use environment variables for sensitive data like tokens.
 - Consider using a `.env` file for local development (not committed to version control).
 - For production, use your platform's secret management system.
+- **`k8s_raw` safe defaults** (per-call opt-in, no restart required):
+  - Mutating methods (`POST`/`PUT`/`PATCH`/`DELETE`) are **blocked** unless the call passes `allowWrite: true`.
+  - `Secret` `data`/`stringData` values are **masked** as `***` (single objects and lists) unless the call passes `showSensitiveData: true`.
+- **Exec tools are opt-in** (env flags, restart required):
+  - `rancher_node_shell` — requires `ENABLE_NODE_SHELL=true`.
+  - `k8s_exec` — requires `ENABLE_CONTAINER_EXEC=true`.
 
 ## Tools overview
-- `rancher_servers_list` / `rancher_servers_add` / `rancher_servers_remove`
+- `rancher_servers_list`
 - `rancher_health`
 - `rancher_clusters_list` / `rancher_cluster_get` / `rancher_nodes_list` / `rancher_projects_list`
 - `rancher_clusters_kubeconfig` / `rancher_kubeconfigs_merge`
-  - `k8s_namespaces_list` / `k8s_raw`
-  - `fleet_gitrepos_list|get|create|apply|redeploy` / `fleet_bdeploys_list` / `fleet_status_summary`
+- `k8s_namespaces_list` / `k8s_raw` (read-only by default; see **Security notes**)
+- `fleet_gitrepos_list|get|create|apply|redeploy` / `fleet_bdeploys_list` / `fleet_status_summary`
+- `rancher_node_shell` *(opt-in: `ENABLE_NODE_SHELL=true`)* — run one command on a node provisioned via a Rancher node driver; the Rancher server proxies the SSH session (no direct access from the MCP host). Returns stdout + exit code.
+- `k8s_exec` *(opt-in: `ENABLE_CONTAINER_EXEC=true`)* — run one non-interactive command in a pod container through the Rancher Kubernetes proxy (WebSocket exec); no kubeconfig or external `kubectl` needed. Returns stdout, stderr and exit code.
 
 ### Handling large lists / compact views
 - `rancher_clusters_list` defaults to a **minimal** view (`id` + `name`). Use `summaryFields` to include more from the curated summary (state/provider/workspace/fleet/kubeVersion, etc.) or `summary=false` to return full cluster objects. Pagination knobs: `limit`, `autoContinue`, `maxPages`, `maxItems`, and `continueToken` (use `pagination.next`).
