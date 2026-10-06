@@ -14,8 +14,14 @@ import {
   resolveToken,
   obfuscateConfig,
   stripMetadataManagedFields,
-  type RancherServerConfig,
+  readBooleanEnv,
 } from "./utils.js";
+import {
+  assertWriteAllowed,
+  maskSensitiveData,
+} from "./k8s-raw-security.js";
+import { runNodeCommand } from "./node-shell.js";
+import { k8sPodExec } from "./k8s-exec.js";
 import { RancherClient, type K8sRawOptions } from "./rancher-client.js";
 
 // ---- Load .env files first ----
@@ -23,6 +29,12 @@ loadEnvFiles();
 
 // ---- Load configuration from environment ----
 const STORE = loadConfigFromEnv();
+
+// ---- Feature flags (opt-in, restart required) ----
+const FLAGS = {
+  enableNodeShell: readBooleanEnv("ENABLE_NODE_SHELL"),
+  enableContainerExec: readBooleanEnv("ENABLE_CONTAINER_EXEC"),
+};
 
 // ---- MCP server ----
 const server = new McpServer({ name: "mcp-rancher-multi", version: "0.3.0" });
@@ -62,57 +74,6 @@ server.registerTool(
       { type: "text", text: toJsonText(Object.values(obfuscateConfig(STORE))) },
     ],
   }),
-);
-
-server.registerTool(
-  "rancher_servers_add",
-  {
-    title: "Add/Update Rancher server (runtime only)",
-    description:
-      "Register a Rancher Manager for current session (not persisted)",
-    inputSchema: z.object({
-      id: z.string(),
-      baseUrl: z.string().url(),
-      token: z.string(),
-      name: z.string().optional(),
-      insecureSkipTlsVerify: z.boolean().optional(),
-      caCertPemBase64: z.string().optional(),
-    }).shape,
-  },
-  async (args: any) => {
-    const cfg: RancherServerConfig = { ...args } as any;
-    STORE[cfg.id] = cfg;
-    return {
-      content: [
-        {
-          type: "text",
-          text: toJsonText(obfuscateConfig({ [cfg.id]: cfg })[cfg.id]),
-        },
-      ],
-    };
-  },
-);
-
-server.registerTool(
-  "rancher_servers_remove",
-  {
-    title: "Remove Rancher server (runtime only)",
-    description: "Deletes a server from current session (not persisted)",
-    inputSchema: z.object({ id: z.string() }).shape,
-  },
-  async ({ id }: { id: string }) => {
-    if (!STORE[id]) throw new Error(`Server '${id}' not found`);
-    const removed = STORE[id];
-    delete STORE[id];
-    return {
-      content: [
-        {
-          type: "text",
-          text: toJsonText(obfuscateConfig({ [id]: removed })[id]),
-        },
-      ],
-    };
-  },
 );
 
 // ---- Tools: clusters / nodes / projects ----
@@ -281,6 +242,12 @@ server.registerTool(
       maxItems: z.number().int().positive().optional(),
       stripManagedFields: z.boolean().default(true),
       stripKeys: z.array(z.string()).optional(),
+      allowWrite: z.boolean().default(false).describe(
+        "per-call: allow mutating methods (POST/PUT/PATCH/DELETE); default false",
+      ),
+      showSensitiveData: z.boolean().default(false).describe(
+        "per-call: show Secret data/stringData unmasked; default false",
+      ),
     }).shape,
   },
   async ({
@@ -297,7 +264,11 @@ server.registerTool(
     maxItems,
     stripManagedFields,
     stripKeys,
+    allowWrite,
+    showSensitiveData,
   }: any) => {
+    // FR-013: read-only by default; per-call opt-in (no MCP restart).
+    assertWriteAllowed(method, allowWrite);
     const client = getClient(serverId);
     const res = await client.k8sRaw({
       clusterId,
@@ -313,11 +284,132 @@ server.registerTool(
       stripManagedFields,
       stripKeys,
     });
+    // FR-014: mask Secret data/stringData unless opted in for this call.
+    const safe =
+      !showSensitiveData && res && typeof res === "object"
+        ? maskSensitiveData(res)
+        : res;
     const text =
-      typeof res === "string" ? res : toJsonText(res, stripManagedFields);
+      typeof safe === "string" ? safe : toJsonText(safe, stripManagedFields);
     return { content: [{ type: "text", text }] };
   },
 );
+
+// ---- Tools: exec (opt-in via env flags; US2/US4) ----
+if (FLAGS.enableNodeShell) {
+  server.registerTool(
+    "rancher_node_shell",
+    {
+      title: "Node shell: run one command on a cluster node via Rancher",
+      description:
+        "Execute a single non-interactive command on a node provisioned via Rancher node driver; " +
+        "connection is proxied by the Rancher server (no direct SSH from MCP). " +
+        "Returns stdout and exit code. Requires ENABLE_NODE_SHELL=true.",
+      inputSchema: z.object({
+        serverId: z.string(),
+        node: z.string().describe("v3 node id (<clusterId>:machine-XXXXX) or nodeName"),
+        clusterId: z.string().optional().describe("disambiguate identical node names"),
+        command: z.string(),
+        timeout: z.number().int().min(1).max(300).default(30),
+      }).shape,
+    },
+    async ({
+      serverId,
+      node,
+      clusterId,
+      command,
+      timeout,
+    }: {
+      serverId: string;
+      node: string;
+      clusterId?: string;
+      command: string;
+      timeout?: number;
+    }) => {
+      const client = getClient(serverId);
+      const { machine, shellLink } = await client.findMachineForNode(node, clusterId);
+      const result = await runNodeCommand({
+        shellLink,
+        token: client.token,
+        command,
+        timeoutSeconds: timeout,
+        insecureSkipTlsVerify: client.insecure,
+      });
+      const out = {
+        node,
+        machine,
+        exitCode: result.exitCode,
+        stdout: result.stdout,
+        stderr: null,
+        truncated: result.truncated,
+        durationMs: result.durationMs,
+      };
+      return { content: [{ type: "text", text: JSON.stringify(out, null, 2) }] };
+    },
+  );
+}
+
+if (FLAGS.enableContainerExec) {
+  server.registerTool(
+    "k8s_exec",
+    {
+      title: "K8s: exec one command in a pod via Rancher proxy",
+      description:
+        "Execute a single non-interactive command (no stdin/TTY) in a pod container through the " +
+        "Rancher Kubernetes proxy (WebSocket exec); no kubeconfig or external kubectl needed. " +
+        "Returns stdout, stderr and exit code. Requires ENABLE_CONTAINER_EXEC=true.",
+      inputSchema: z.object({
+        serverId: z.string(),
+        clusterId: z.string(),
+        namespace: z.string(),
+        pod: z.string(),
+        container: z.string().optional().describe("required when the pod has multiple containers"),
+        command: z.string(),
+        timeout: z.number().int().min(1).max(300).default(30),
+      }).shape,
+    },
+    async ({
+      serverId,
+      clusterId,
+      namespace,
+      pod,
+      container,
+      command,
+      timeout,
+    }: {
+      serverId: string;
+      clusterId: string;
+      namespace: string;
+      pod: string;
+      container?: string;
+      command: string;
+      timeout?: number;
+    }) => {
+      const client = getClient(serverId);
+      const result = await k8sPodExec({
+        baseUrl: client.baseUrl,
+        token: client.token,
+        clusterId,
+        namespace,
+        pod,
+        container,
+        command,
+        timeoutSeconds: timeout,
+        insecureSkipTlsVerify: client.insecure,
+      });
+      const out = {
+        pod,
+        container: container ?? null,
+        exitCode: result.exitCode,
+        stdout: result.stdout,
+        stderr: result.stderr,
+        truncated: result.truncated,
+        durationMs: result.durationMs,
+      };
+      return { content: [{ type: "text", text: JSON.stringify(out, null, 2) }] };
+    },
+  );
+}
 
 // ---- Tools: Health & kubeconfig merge ----
 server.registerTool(

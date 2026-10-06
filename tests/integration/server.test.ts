@@ -77,27 +77,6 @@ describe('MCP Server Integration', () => {
       });
     });
 
-    it('should register rancher_servers_add tool', () => {
-      // Simulate tool registration
-      mockServer.registerTool('rancher_servers_add', {
-        title: 'Add/Update Rancher server',
-        description: 'Register a Rancher Manager for later use',
-        inputSchema: {}
-      }, () => {});
-      
-      const calls = mockServer.registerTool.mock.calls;
-      const serverAddCall = calls.find((call: any) => 
-        call[0] === 'rancher_servers_add'
-      );
-      
-      expect(serverAddCall).toBeDefined();
-      expect(serverAddCall[1]).toEqual({
-        title: 'Add/Update Rancher server',
-        description: 'Register a Rancher Manager for later use',
-        inputSchema: {}
-      });
-    });
-
     it('should register rancher_clusters_list tool', () => {
       // Simulate tool registration
       mockServer.registerTool('rancher_clusters_list', {
@@ -132,26 +111,6 @@ describe('MCP Server Integration', () => {
       
       expect(result).toEqual({
         content: [{ type: 'text', text: '[]' }]
-      });
-    });
-
-    it('should handle rancher_servers_add correctly', async () => {
-      const mockHandler = vi.fn().mockImplementation(async (args: any) => {
-        return {
-          content: [{ type: 'text', text: JSON.stringify(args, null, 2) }]
-        };
-      });
-
-      const testConfig = {
-        id: 'test-server',
-        baseUrl: 'https://test.local',
-        token: 'test-token'
-      };
-
-      const result = await mockHandler(testConfig);
-      
-      expect(result).toEqual({
-        content: [{ type: 'text', text: JSON.stringify(testConfig, null, 2) }]
       });
     });
   });

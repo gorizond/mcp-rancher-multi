@@ -186,6 +186,96 @@ ${truncateBody(text)}`);
     return res.data;
   }
 
+  /**
+   * Resolve a CAPI Machine for a node and return its Steve `shell` link.
+   * `node` is either a v3 node id (`<clusterId>:machine-XXXXX`) or a nodeName.
+   * Contract: specs/20261006-233657-mcp-rancher-node-ssh (T008, FR-004/FR-007).
+   */
+  async findMachineForNode(
+    node: string,
+    clusterId?: string,
+  ): Promise<{ machine: string; shellLink: string }> {
+    let nodeName = node;
+    let effectiveClusterId = clusterId;
+
+    if (node.includes(":")) {
+      const colon = node.indexOf(":");
+      if (!effectiveClusterId) effectiveClusterId = node.slice(0, colon);
+      type NodeResp = { nodeName?: string; hostname?: string; name?: string };
+      const nodeUrl = `${this.baseUrl}/v3/nodes/${encodeURIComponent(node)}`;
+      let nodeInfo: NodeResp;
+      try {
+        nodeInfo = await this.requestJSON<NodeResp>(nodeUrl);
+      } catch (err) {
+        // Surface a clear "not found" instead of a raw HTTP error (FR-007).
+        const message = err instanceof Error ? err.message : String(err);
+        if (message.includes("HTTP 404")) {
+          throw new Error(`Node '${node}' not found`);
+        }
+        throw err;
+      }
+      nodeName = nodeInfo.nodeName || nodeInfo.hostname || nodeInfo.name || node;
+    }
+
+    type SteveMachine = {
+      metadata?: { namespace?: string; name?: string; labels?: Record<string, string>; annotations?: Record<string, string> };
+      spec?: { infrastructureRef?: { apiGroup?: string } };
+      status?: { nodeRef?: { name?: string } };
+      links?: { shell?: string };
+    };
+    type SteveResult = { data?: SteveMachine[] };
+
+    // Steve API uses the dot form: /v1/<group>.<resource> (slash form → 404).
+    const machinesUrl = `${this.baseUrl}/v1/cluster.x-k8s.io.machines`;
+    const res = await this.requestJSON<SteveResult>(machinesUrl);
+    const machines = Array.isArray(res?.data) ? res.data : [];
+    let candidates = machines.filter(
+      (m) => m?.status?.nodeRef?.name === nodeName,
+    );
+
+    if (candidates.length === 0) {
+      throw new Error(`Node '${node}' not found`);
+    }
+
+    if (candidates.length > 1) {
+      if (!effectiveClusterId) {
+        throw new Error(`Node '${node}' ambiguous — pass clusterId`);
+      }
+      type ClusterResp = { name?: string };
+      const clusterUrl = `${this.baseUrl}/v3/clusters/${encodeURIComponent(effectiveClusterId)}`;
+      const cluster = await this.requestJSON<ClusterResp>(clusterUrl);
+      const clusterName = cluster?.name;
+      candidates = candidates.filter((m) => {
+        const labels = m?.metadata?.labels || {};
+        const annotations = m?.metadata?.annotations || {};
+        return (
+          !!clusterName &&
+          (labels["cluster.x-k8s.io/cluster-name"] === clusterName ||
+            annotations["cluster.x-k8s.io/cluster-name"] === clusterName)
+        );
+      });
+      if (candidates.length === 0) {
+        throw new Error(`Node '${node}' not found`);
+      }
+      if (candidates.length > 1) {
+        throw new Error(`Node '${node}' ambiguous — pass clusterId`);
+      }
+    }
+
+    const machine = candidates[0];
+    const apiGroup = machine?.spec?.infrastructureRef?.apiGroup;
+    const shellLink = machine?.links?.shell;
+    if (apiGroup !== "rke-machine.cattle.io" || !shellLink) {
+      throw new Error(
+        `Node '${node}' has no SSH shell (not provisioned via node driver)`,
+      );
+    }
+
+    const namespace = machine?.metadata?.namespace;
+    const name = machine?.metadata?.name;
+    return { machine: `${namespace}/${name}`, shellLink };
+  }
+
   async getCluster(id: string, options: ClusterListOptions = {}) {
     const { summary = false, stripKeys: keysToStrip = [] } = options;
     type Cluster = {

@@ -73,42 +73,6 @@ describe('MCP Server', () => {
     );
   });
 
-  it('should register rancher_servers_add tool', () => {
-    mockServer.registerTool('rancher_servers_add', {
-      title: "Add/Update Rancher server (runtime only)",
-      description: "Register a Rancher Manager for current session (not persisted)",
-      inputSchema: expect.any(Object)
-    }, expect.any(Function));
-    
-    expect(mockServer.registerTool).toHaveBeenCalledWith(
-      'rancher_servers_add',
-      {
-        title: "Add/Update Rancher server (runtime only)",
-        description: "Register a Rancher Manager for current session (not persisted)",
-        inputSchema: expect.any(Object)
-      },
-      expect.any(Function)
-    );
-  });
-
-  it('should register rancher_servers_remove tool', () => {
-    mockServer.registerTool('rancher_servers_remove', {
-      title: "Remove Rancher server (runtime only)",
-      description: "Deletes a server from current session (not persisted)",
-      inputSchema: expect.any(Object)
-    }, expect.any(Function));
-    
-    expect(mockServer.registerTool).toHaveBeenCalledWith(
-      'rancher_servers_remove',
-      {
-        title: "Remove Rancher server (runtime only)",
-        description: "Deletes a server from current session (not persisted)",
-        inputSchema: expect.any(Object)
-      },
-      expect.any(Function)
-    );
-  });
-
   it('should register rancher_clusters_list tool', () => {
     mockServer.registerTool('rancher_clusters_list', {
       title: "List clusters",
@@ -400,8 +364,6 @@ describe('MCP Server', () => {
   it('should register all expected tools', () => {
     const expectedTools = [
       'rancher_servers_list',
-      'rancher_servers_add',
-      'rancher_servers_remove',
       'rancher_clusters_list',
       'rancher_cluster_get',
       'rancher_clusters_kubeconfig',
