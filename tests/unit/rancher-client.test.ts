@@ -705,4 +705,68 @@ describe("RancherClient", () => {
       );
     });
   });
+
+  describe("findMachineForNode", () => {
+    const nodeResp = { id: "c-m-1:machine-a", nodeName: "worker-1" };
+    const machinesResp = {
+      type: "collection",
+      data: [
+        {
+          metadata: { namespace: "fleet-default", name: "worker-1-machine" },
+          spec: { infrastructureRef: { apiGroup: "rke-machine.cattle.io" } },
+          status: { nodeRef: { name: "worker-1" } },
+          links: { shell: "https://rancher.test/v1/cluster.x-k8s.io.machines/fleet-default/worker-1-machine/shell" },
+        },
+      ],
+    };
+
+    it("should use the Steve dot form /v1/<group>.<resource> (not a slash path)", async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(nodeResp) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(machinesResp) });
+
+      const res = await client.findMachineForNode("c-m-1:machine-a");
+
+      const machinesUrl = String(mockFetch.mock.calls[1][0]);
+      expect(machinesUrl).toContain("/v1/cluster.x-k8s.io.machines");
+      expect(machinesUrl).not.toContain("/v1/cluster.x-k8s.io/machines");
+      expect(res.machine).toBe("fleet-default/worker-1-machine");
+      expect(res.shellLink).toContain("/shell");
+    });
+
+    it("should map an HTTP 404 node lookup to a clear 'not found' error", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: "Not Found",
+        text: () => Promise.resolve("not found"),
+      });
+
+      await expect(client.findMachineForNode("c-m-1:machine-missing")).rejects.toThrow(
+        "Node 'c-m-1:machine-missing' not found",
+      );
+    });
+
+    it("should map a missing CAPI machine to 'not found'", async () => {
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(nodeResp) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ type: "collection", data: [] }) });
+
+      await expect(client.findMachineForNode("c-m-1:machine-a")).rejects.toThrow(
+        "Node 'c-m-1:machine-a' not found",
+      );
+    });
+
+    it("should report 'no SSH shell' when links.shell is missing", async () => {
+      const noShell = JSON.parse(JSON.stringify(machinesResp));
+      delete noShell.data[0].links;
+      mockFetch
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(nodeResp) })
+        .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve(noShell) });
+
+      await expect(client.findMachineForNode("c-m-1:machine-a")).rejects.toThrow(
+        "has no SSH shell (not provisioned via node driver)",
+      );
+    });
+  });
 });

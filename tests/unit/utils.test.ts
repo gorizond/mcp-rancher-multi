@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { resolveToken, loadStore, saveStore, obfuscateConfig, loadConfigFromEnv, stripMetadataManagedFields, stripKeys, RancherServerConfig } from '../../src/utils.js';
+import { resolveToken, loadStore, saveStore, obfuscateConfig, loadConfigFromEnv, stripMetadataManagedFields, stripKeys, readBooleanEnv, truncateOutput, RancherServerConfig } from '../../src/utils.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -551,6 +551,61 @@ describe('Utils', () => {
       
       const savedData = JSON.parse(fs.readFileSync(tempFile, 'utf-8'));
       expect(savedData).toEqual(testData);
+    });
+  });
+
+  describe('readBooleanEnv', () => {
+    it('should read true/1 as true (case-insensitive, trimmed)', () => {
+      process.env.TEST_FLAG = 'true';
+      expect(readBooleanEnv('TEST_FLAG')).toBe(true);
+      process.env.TEST_FLAG = 'TRUE';
+      expect(readBooleanEnv('TEST_FLAG')).toBe(true);
+      process.env.TEST_FLAG = '1';
+      expect(readBooleanEnv('TEST_FLAG')).toBe(true);
+      process.env.TEST_FLAG = ' true ';
+      expect(readBooleanEnv('TEST_FLAG')).toBe(true);
+    });
+
+    it('should return false for unset or falsy-ish values', () => {
+      delete process.env.TEST_FLAG;
+      expect(readBooleanEnv('TEST_FLAG')).toBe(false);
+      process.env.TEST_FLAG = 'false';
+      expect(readBooleanEnv('TEST_FLAG')).toBe(false);
+      process.env.TEST_FLAG = '0';
+      expect(readBooleanEnv('TEST_FLAG')).toBe(false);
+      process.env.TEST_FLAG = 'yes';
+      expect(readBooleanEnv('TEST_FLAG')).toBe(false);
+    });
+  });
+
+  describe('truncateOutput', () => {
+    it('should return text unchanged when within limit', () => {
+      const result = truncateOutput('hello world', 100);
+      expect(result.text).toBe('hello world');
+      expect(result.truncated).toBe(false);
+    });
+
+    it('should truncate and add marker when over limit', () => {
+      const text = 'a'.repeat(200);
+      const result = truncateOutput(text, 100);
+      expect(result.truncated).toBe(true);
+      expect(result.text.length).toBeLessThan(text.length);
+      expect(result.text).toContain('[truncated: 100 bytes]');
+    });
+
+    it('should use default 100 KiB limit', () => {
+      const small = 'x'.repeat(1000);
+      expect(truncateOutput(small).truncated).toBe(false);
+      const big = 'x'.repeat(102400 + 10);
+      expect(truncateOutput(big).truncated).toBe(true);
+    });
+
+    it('should cut on UTF-8 byte boundary without corruption', () => {
+      const text = 'ё'.repeat(100); // 2 bytes per char
+      const result = truncateOutput(text, 51);
+      expect(result.truncated).toBe(true);
+      // no replacement chars from broken multibyte sequence at the cut
+      expect(result.text).not.toContain('�');
     });
   });
 });

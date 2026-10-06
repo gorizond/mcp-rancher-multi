@@ -40,6 +40,42 @@ export function resolveToken(tok: string): string {
 }
 
 /**
+ * Read a boolean feature flag from environment.
+ * Truthy values: "true", "1" (case-insensitive). Anything else (including unset) → false.
+ */
+export function readBooleanEnv(name: string): boolean {
+  const value = process.env[name];
+  if (value === undefined) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === "true" || normalized === "1";
+}
+
+/** Default output limit for exec-like tools: 100 KiB. */
+export const OUTPUT_LIMIT_BYTES = 102400;
+
+/**
+ * Truncate text to `limit` bytes (UTF-8) with an explicit marker.
+ * Returns the original string when within the limit.
+ * The cut is aligned to a UTF-8 character boundary (no broken multibyte chars).
+ */
+export function truncateOutput(
+  text: string,
+  limit: number = OUTPUT_LIMIT_BYTES,
+): { text: string; truncated: boolean } {
+  const buf = Buffer.from(text, "utf8");
+  if (buf.length <= limit) return { text, truncated: false };
+
+  // Back up over UTF-8 continuation bytes so the cut lands on a char boundary.
+  let end = limit;
+  while (end > 0 && (buf[end] & 0xc0) === 0x80) end--;
+
+  const sliced = buf.subarray(0, end).toString("utf8");
+  const dropped = buf.length - end;
+  return { text: `${sliced}\n... [truncated: ${dropped} bytes]`, truncated: true };
+}
+
+
+/**
  * Obfuscate sensitive data like tokens for safe logging
  */
 export function obfuscateConfig(config: Record<string, RancherServerConfig>): Record<string, any> {
