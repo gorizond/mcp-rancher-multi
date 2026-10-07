@@ -124,9 +124,9 @@ See `env.example` for a complete example.
 - Consider using a `.env` file for local development (not committed to version control).
 - For production, use your platform's secret management system.
 - **`k8s_raw` safe defaults** (per-call opt-in, no restart required):
-  - Mutating methods (`POST`/`PUT`/`PATCH`/`DELETE`) are **blocked** unless the call passes `allowWrite: true`.
-  - `Secret` `data`/`stringData` values are **masked** as `***` (single objects and lists) unless the call passes `showSensitiveData: true`.
-- **Exec tools are opt-in** (env flags, restart required):
+  - `allowWrite` (default: `false`) — mutating methods (`POST`/`PUT`/`PATCH`/`DELETE`) are **blocked** unless the call passes `allowWrite: true`.
+  - `showSensitiveData` (default: `false`) — `Secret` `data`/`stringData` values are **masked** as `***` (single objects and lists) unless the call passes `showSensitiveData: true`.
+- **Exec tools are opt-in** (env flags, default: `false`, restart required):
   - `rancher_node_shell` — requires `ENABLE_NODE_SHELL=true`.
   - `k8s_exec` — requires `ENABLE_CONTAINER_EXEC=true`.
 
@@ -138,6 +138,7 @@ See `env.example` for a complete example.
 - `k8s_namespaces_list` / `k8s_raw` (read-only by default; see **Security notes**)
 - `fleet_gitrepos_list|get|create|apply|redeploy` / `fleet_bdeploys_list` / `fleet_status_summary`
 - `rancher_node_shell` *(opt-in: `ENABLE_NODE_SHELL=true`)* — run one command on a node provisioned via a Rancher node driver; the Rancher server proxies the SSH session (no direct access from the MCP host). Returns stdout + exit code.
+  - **Limitations**: `stderr` is not delivered separately — the session is a PTY, so stderr is merged into stdout and the result always has `stderr: null`; an exit-code marker is appended to stdout internally and stripped from the result. Known upstream issue [rancher/rancher#52003](https://github.com/rancher/rancher/issues/52003) (WebSocket ping-pong under heavy output; low risk for one-shot commands).
 - `k8s_exec` *(opt-in: `ENABLE_CONTAINER_EXEC=true`)* — run one non-interactive command in a pod container through the Rancher Kubernetes proxy (WebSocket exec); no kubeconfig or external `kubectl` needed. Returns stdout, stderr and exit code.
 
 ### Handling large lists / compact views
